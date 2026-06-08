@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ project.name }} — Dynalog AI</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9f9f8;color:#1a1a1a;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+    /* Top bar */
+    .topbar{height:52px;background:#fff;border-bottom:1px solid #e8e8e5;display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:100}
+    .back-btn{font-size:13px;color:#555;text-decoration:none;padding:5px 10px;border-radius:7px;border:1px solid #e8e8e5;background:#fff;cursor:pointer;transition:background .15s}
+    .back-btn:hover{background:#f5f5f3}
+    .proj-name{font-size:14px;font-weight:500;flex:1}
+    .topbar-right{display:flex;align-items:center;gap:8px}
+    .user-pill{font-size:12px;color:#555;background:#f5f5f3;padding:5px 10px;border-radius:20px}
+    .sign-out{font-size:12px;color:#888;text-decoration:none;padding:5px 10px;border-radius:7px;border:1px solid #e8e8e5}
+    .sign-out:hover{background:#f5f5f3}
+
+    /* Three column layout */
+    .workspace{display:flex;flex:1;overflow:hidden}
+
+    /* LEFT PANEL — Sources */
+    .left-panel{width:240px;border-right:1px solid #e8e8e5;background:#fff;display:flex;flex-direction:column;flex-shrink:0}
+    .panel-header{padding:14px 16px 10px;border-bottom:1px solid #f0f0f0}
+    .panel-title{font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.06em}
+    .panel-scroll{flex:1;overflow-y:auto;padding:8px}
+    .panel-scroll::-webkit-scrollbar{width:3px}
+    .panel-scroll::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:2px}
+
+    /* Source items */
+    .source-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;cursor:pointer;transition:background .12s;margin-bottom:2px}
+    .source-item:hover{background:#f5f5f3}
+    .source-icon{width:28px;height:28px;border-radius:6px;background:#f0f0ed;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+    .source-info{flex:1;min-width:0}
+    .source-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333}
+    .source-type{font-size:10px;color:#aaa;margin-top:1px}
+    .source-badge{font-size:9px;padding:2px 5px;border-radius:8px;font-weight:500;flex-shrink:0}
+    .badge-ok{background:#f0fdf4;color:#16a34a}
+    .badge-pending{background:#fef9ec;color:#ca8a04}
+
+    .upload-area{padding:10px 8px;border-top:1px solid #f0f0f0}
+    .upload-btn-small{width:100%;padding:8px;background:none;border:1px dashed #ccc;border-radius:8px;font-size:12px;cursor:pointer;color:#666;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+    .upload-btn-small:hover{border-color:#0a1628;color:#0a1628;background:#f9f9f8}
+    #srcFileInput,#srcFolderInput{display:none}
+    .upload-progress-mini{font-size:11px;color:#1d4ed8;padding:4px 0;display:none;align-items:center;gap:5px}
+    .sp{width:10px;height:10px;border:1.5px solid #bfdbfe;border-top-color:#1d4ed8;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Chat history in left panel */
+    .history-section{border-top:1px solid #f0f0f0}
+    .history-header{padding:10px 16px 6px;display:flex;justify-content:space-between;align-items:center}
+    .history-title{font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.06em}
+    .new-chat-btn{font-size:11px;color:#185FA5;background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px}
+    .new-chat-btn:hover{background:#eff6ff}
+    .conv-item{padding:7px 10px;border-radius:7px;cursor:pointer;transition:background .12s;margin:1px 8px}
+    .conv-item:hover{background:#f5f5f3}
+    .conv-item.active{background:#f0f0ed}
+    .conv-title-text{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333}
+    .conv-item.active .conv-title-text{color:#0a1628}
+    .conv-meta-text{font-size:10px;color:#aaa;margin-top:1px}
+    .date-label{font-size:10px;font-weight:600;color:#bbb;text-transform:uppercase;padding:6px 10px 2px;letter-spacing:.04em}
+
+    /* CENTER PANEL — Chat */
+    .center-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#f9f9f8}
+    .messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:4px;scroll-behavior:smooth}
+    .messages::-webkit-scrollbar{width:4px}
+    .messages::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px}
+
+    /* Welcome state */
+    .welcome-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center}
+    .welcome-icon{width:52px;height:52px;background:#0a1628;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 16px}
+    .welcome-title{font-size:20px;font-weight:500;margin-bottom:8px}
+    .welcome-sub{font-size:14px;color:#666;max-width:380px;line-height:1.6;margin-bottom:20px}
+    .chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;max-width:480px}
+    .chip{background:#fff;border:1px solid #e8e8e5;border-radius:20px;padding:6px 13px;font-size:12px;color:#444;cursor:pointer;transition:all .15s}
+    .chip:hover{background:#f0f0ed;border-color:#ccc}
+
+    /* Messages */
+    .msg-row{display:flex;padding:3px 0;width:100%}
+    .msg-row.user{justify-content:flex-end}
+    .msg-row.bot{justify-content:flex-start}
+    .msg-inner{display:flex;gap:10px;max-width:680px;width:100%}
+    .msg-row.user .msg-inner{flex-direction:row-reverse}
+    .avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px}
+    .msg-row.user .avatar{background:#0a1628;color:#fff;font-size:11px;font-weight:700}
+    .msg-row.bot .avatar{background:#f0f0ed;font-size:15px}
+    .msg-body{display:flex;flex-direction:column;gap:5px;max-width:calc(100% - 42px)}
+    .msg-row.user .msg-body{align-items:flex-end}
+    .msg-row.bot .msg-body{align-items:flex-start}
+    .sender-label{font-size:11px;font-weight:600;color:#aaa;padding:0 2px}
+    .bubble{padding:10px 14px;font-size:14px;line-height:1.75;max-width:100%;word-wrap:break-word;white-space:pre-wrap}
+    .msg-row.user .bubble{background:#0a1628;color:#fff;border-radius:16px 16px 3px 16px}
+    .msg-row.bot .bubble{background:transparent;color:#1a1a1a;padding:3px 0}
+    .sources-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+    .src-chip{background:#f0f0ed;border:1px solid #e0e0db;border-radius:5px;padding:3px 7px;font-size:10px;color:#555}
+    .cursor-blink{display:inline-block;width:2px;height:13px;background:#333;margin-left:1px;animation:blink .7s infinite;vertical-align:middle}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    .typing-dots span{display:inline-block;width:5px;height:5px;background:#aaa;border-radius:50%;margin:0 2px;animation:bounce 1.2s infinite}
+    .typing-dots span:nth-child(2){animation-delay:.2s}
+    .typing-dots span:nth-child(3){animation-delay:.4s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+    /* Input */
+    .input-wrap{padding:12px 20px 16px;background:#f9f9f8;flex-shrink:0}
+    .input-box{background:#fff;border:1px solid #e0e0db;border-radius:14px;overflow:hidden;transition:border-color .15s;box-shadow:0 1px 6px rgba(0,0,0,.05);max-width:720px;margin:0 auto}
+    .input-box:focus-within{border-color:#0a1628}
+    .input-meta{padding:7px 14px 0;display:flex;align-items:center;gap:7px}
+    .meta-pill{font-size:10px;color:#888;background:#f5f5f3;padding:2px 7px;border-radius:8px}
+    .model-pill{font-size:10px;color:#16a34a;background:#f0fdf4;padding:2px 7px;border-radius:8px;border:1px solid #bbf7d0}
+    .stream-row{padding:0 14px;display:none;align-items:center;gap:6px;font-size:11px;color:#888}
+    .stream-dot{width:5px;height:5px;border-radius:50%;background:#0a1628;animation:pulse 1s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .input-main{display:flex;align-items:flex-end;padding:8px 12px 10px;gap:7px}
+    textarea{flex:1;border:none;outline:none;resize:none;font-size:14px;font-family:inherit;line-height:1.5;background:transparent;color:#1a1a1a;max-height:140px;padding:4px 0}
+    textarea::placeholder{color:#bbb}
+    .send-btn{width:34px;height:34px;border-radius:9px;background:#0a1628;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;transition:background .15s}
+    .send-btn:hover{background:#1a2e4a}
+    .send-btn:disabled{background:#ddd;cursor:not-allowed}
+    .input-hint{font-size:10px;color:#ccc;text-align:center;padding:4px 0 0;max-width:720px;margin:0 auto}
+
+    /* RIGHT PANEL — Tools */
+    .right-panel{width:300px;border-left:1px solid #e8e8e5;background:#fff;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+    .right-panel-scroll{flex:1;overflow-y:auto;padding:10px}
+    .right-panel-scroll::-webkit-scrollbar{width:3px}
+    .right-panel-scroll::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:2px}
+    .right-header{padding:12px 14px 8px;border-bottom:1px solid #f0f0f0}
+    .right-title{font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.06em}
+
+    /* Tool cards */
+    .tool-card{border:1px solid #e8e8e5;border-radius:10px;margin-bottom:8px;overflow:hidden;transition:border-color .15s}
+    .tool-card-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;background:#fff;transition:background .12s}
+    .tool-card-head:hover{background:#f9f9f8}
+    .tool-card-left{display:flex;align-items:center;gap:8px}
+    .tool-icon{font-size:15px}
+    .tool-name{font-size:13px;font-weight:500;color:#1a1a1a}
+    .tool-status{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500}
+    .status-ready{background:#f0fdf4;color:#16a34a}
+    .status-idle{background:#f5f5f3;color:#888}
+    .status-loading{background:#eff6ff;color:#1d4ed8}
+    .tool-gen-btn{font-size:11px;padding:4px 9px;border-radius:6px;border:none;cursor:pointer;font-weight:500;transition:all .15s;white-space:nowrap}
+    .tool-gen-btn:disabled{opacity:.5;cursor:not-allowed}
+    .tool-body{display:none;border-top:1px solid #f5f5f5;background:#fff}
+    .tool-body.open{display:block}
+    .tool-content{padding:10px 12px}
+    .tool-empty-msg{font-size:12px;color:#bbb;text-align:center;padding:12px 0}
+    .tool-result-wrap{display:none}
+    .tool-result-wrap.show{display:block}
+    .tool-dl-row{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+    .dl-btn{font-size:11px;padding:4px 8px;border:1px solid #e0e0db;border-radius:5px;background:#fff;cursor:pointer;color:#444;transition:all .15s}
+    .dl-btn:hover{background:#0a1628;color:#fff;border-color:#0a1628}
+    .svg-output{background:#0a0f1e;border-radius:7px;overflow:hidden}
+    .ppt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+    .slide-mini{background:#0a1628;border-radius:4px;padding:6px;aspect-ratio:4/3;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+    .slide-mini-num{font-size:8px;color:#378ADD;margin-bottom:3px}
+    .slide-mini-title{font-size:9px;color:#fff;font-weight:500;line-height:1.2}
+    .faq-item{border-bottom:1px solid #f5f5f5;padding:7px 0}
+    .faq-item:last-child{border-bottom:none}
+    .faq-q{font-size:12px;font-weight:500;color:#0a1628;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;line-height:1.4}
+    .faq-a{font-size:11px;color:#666;line-height:1.6;display:none;margin-top:4px}
+    .faq-a.open{display:block}
+    .timeline-item-small{display:flex;gap:8px;margin-bottom:10px}
+    .tl-dot{width:8px;height:8px;border-radius:50%;background:#0a1628;flex-shrink:0;margin-top:3px}
+    .tl-dot.milestone{background:#16a34a}
+    .tl-dot.completion{background:#185FA5}
+    .tl-dot.issue{background:#dc2626}
+    .tl-date{font-size:10px;color:#888;margin-bottom:1px}
+    .tl-title{font-size:12px;font-weight:500}
+    .tl-desc{font-size:11px;color:#666}
+    .briefing-block{margin-bottom:10px}
+    .briefing-label{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .briefing-line{font-size:11px;color:#555;padding:3px 0;border-bottom:1px solid #f5f5f5;line-height:1.5}
+    .briefing-line:last-child{border-bottom:none}
+    .action-mini{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 7px;background:#f9f9f8;border-radius:5px;margin-bottom:3px}
+    .pri-h{font-size:9px;color:#dc2626;background:#fef2f2;padding:1px 5px;border-radius:7px;font-weight:500}
+    .pri-m{font-size:9px;color:#ca8a04;background:#fef9ec;padding:1px 5px;border-radius:7px;font-weight:500}
+    .pri-l{font-size:9px;color:#16a34a;background:#f0fdf4;padding:1px 5px;border-radius:7px;font-weight:500}
+    .loading-row{display:none;align-items:center;gap:7px;font-size:12px;color:#888;padding:8px 0}
+    .ls{width:12px;height:12px;border:1.5px solid #e0e0db;border-top-color:#0a1628;border-radius:50%;animation:spin .7s linear infinite}
+    .overview-text{font-size:12px;color:#555;line-height:1.7;background:#f9f9f8;border-radius:7px;padding:10px;border-left:2px solid #0a1628;margin-bottom:8px}
+    .meta-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+    .meta-tag{font-size:10px;padding:3px 7px;border-radius:10px;font-weight:500}
+    .tag-blue{background:#e8f0fe;color:#1a56db}
+    .tag-green{background:#f0fdf4;color:#16a34a}
+    .tag-amber{background:#fef9ec;color:#ca8a04}
+    .topic-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+    .topic-tag{font-size:10px;background:#f0f0ed;border:1px solid #e0e0db;border-radius:12px;padding:3px 8px;color:#444;cursor:pointer;transition:all .15s}
+    .topic-tag:hover{background:#0a1628;color:#fff;border-color:#0a1628}
+
+    /* Tool button colors */
+    .btn-overview{background:#0a1628;color:#fff}
+    .btn-ppt{background:#185FA5;color:#fff}
+    .btn-diagram{background:#0F6E56;color:#fff}
+    .btn-flowchart{background:#534AB7;color:#fff}
+    .btn-mindmap{background:#854F0B;color:#fff}
+    .btn-timeline{background:#185FA5;color:#fff}
+    .btn-briefing{background:#A32D2D;color:#fff}
+    .btn-faq{background:#0F6E56;color:#fff}
+    .btn-report{background:#444;color:#fff}
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <a href="/dashboard" class="back-btn">← Dashboard</a>
+  <span class="proj-name">{{ project.name }}</span>
+  <div class="topbar-right">
+    <span class="user-pill">{{ current_user.full_name }}</span>
+    <a href="/logout" class="sign-out">Sign out</a>
+  </div>
+</div>
+
+<div class="workspace">
+
+  <!-- LEFT: Sources + Chat history -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <div class="panel-title">Sources</div>
+    </div>
+    <div class="panel-scroll" style="flex:none;max-height:280px">
+      {% for f in files %}
+      <div class="source-item">
+        <div class="source-icon">
+          {% if f.file_type=='pdf' %}📕
+          {% elif f.file_type in ['docx','doc'] %}📘
+          {% elif f.file_type in ['csv','xlsx'] %}📊
+          {% elif f.file_type in ['py','js','c','cpp'] %}💻
+          {% else %}📄{% endif %}
+        </div>
+        <div class="source-info">
+          <div class="source-name" title="{{ f.original_name }}">{{ f.original_name }}</div>
+          <div class="source-type">{{ f.file_type|upper if f.file_type else 'FILE' }}</div>
+        </div>
+        <span class="source-badge {% if f.indexed %}badge-ok{% else %}badge-pending{% endif %}">
+          {% if f.indexed %}✓{% else %}…{% endif %}
+        </span>
+      </div>
+      {% else %}
+      <div style="font-size:12px;color:#bbb;text-align:center;padding:16px 8px;line-height:1.6">No sources yet.<br>Upload files below.</div>
+      {% endfor %}
+    </div>
+
+    <div class="upload-area">
+      <input type="file" id="srcFileInput" multiple onchange="srcUpload(this.files,'files')">
+      <input type="file" id="srcFolderInput" multiple webkitdirectory onchange="srcUpload(this.files,'folder')">
+      <button class="upload-btn-small" onclick="document.getElementById('srcFileInput').click()">+ Add sources</button>
+      <button class="upload-btn-small" style="margin-top:5px" onclick="document.getElementById('srcFolderInput').click()">+ Add folder</button>
+      <div class="upload-progress-mini" id="uploadMini">
+        <div class="sp"></div><span id="uploadMiniMsg">Indexing...</span>
+      </div>
+    </div>
+
+    <div class="history-section" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div class="history-header">
+        <span class="history-title">Chats</span>
+        <button class="new-chat-btn" onclick="newChat()">+ New</button>
+      </div>
+      <div class="panel-scroll" style="flex:1">
+        {% if conversations %}
+          {% set ns = namespace(last_group='') %}
+          {% for conv in conversations %}
+            {% if conv.updated_at != ns.last_group %}
+              {% set ns.last_group = conv.updated_at %}
+              <div class="date-label">
+                {% if conv.updated_at == today %}Today
+                {% elif conv.updated_at == yesterday %}Yesterday
+                {% else %}{{ conv.updated_at }}{% endif %}
+              </div>
+            {% endif %}
+            <div class="conv-item {% if active_conv_id == conv.id %}active{% endif %}"
+                 id="conv-{{ conv.id }}" onclick="loadConv({{ conv.id }})">
+              <div class="conv-title-text">{{ conv.title }}</div>
+              <div class="conv-meta-text">{{ conv.msg_count }} msgs</div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="font-size:11px;color:#bbb;text-align:center;padding:12px 8px">No chats yet</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Chat -->
+  <div class="center-panel">
+
+    <div class="welcome-state" id="welcomeState" {% if active_conv_id %}style="display:none"{% endif %}>
+      <div class="welcome-icon">📁</div>
+      <div class="welcome-title">{{ project.name }}</div>
+      <div class="welcome-sub">Ask anything about your project. I'll answer only from your uploaded sources and tell you exactly which file the answer came from.</div>
+      <div class="chips">
+        <div class="chip" onclick="chip(this)">Summarise this project</div>
+        <div class="chip" onclick="chip(this)">What issues are documented?</div>
+        <div class="chip" onclick="chip(this)">List all components</div>
+        <div class="chip" onclick="chip(this)">Key specifications</div>
+        <div class="chip" onclick="chip(this)">What tests were done?</div>
+        <div class="chip" onclick="chip(this)">Main findings</div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages" {% if not active_conv_id %}style="display:none"{% endif %}>
+      {% for item in history %}
+      <div class="msg-row user">
+        <div class="msg-inner">
+          <div class="avatar">{{ current_user.full_name[:2].upper() }}</div>
+          <div class="msg-body"><div class="bubble">{{ item.message }}</div></div>
+        </div>
+      </div>
+      <div class="msg-row bot">
+        <div class="msg-inner">
+          <div class="avatar">📁</div>
+          <div class="msg-body">
+            <div class="sender-label">Project AI</div>
+            <div class="bubble">{{ item.response }}</div>
+            {% if item.sources %}
+            <div class="sources-row">
+              <script>(function(){try{var s={{ item.sources|safe }};if(typeof s==='string')s=JSON.parse(s);var r=document.currentScript.previousElementSibling;s.forEach(function(x){var c=document.createElement('span');c.className='src-chip';c.textContent='📄 '+x.filename;r.appendChild(c);});}catch(e){}})();</script>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="input-wrap">
+      <div class="input-box">
+        <div class="input-meta">
+          <span class="meta-pill">📂 {{ files|selectattr('indexed')|list|length }}/{{ files|length }} indexed</span>
+          <span class="model-pill">⚡ local AI</span>
+        </div>
+        <div class="stream-row" id="streamRow">
+          <div class="stream-dot"></div><span>AI is writing...</span>
+        </div>
+        <div class="input-main">
+          <textarea id="chatInput" rows="1" placeholder="Ask about {{ project.name }}..."
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMsg()">↑</button>
+        </div>
+      </div>
+      <div class="input-hint">Answers based only on uploaded sources · Enter to send · Shift+Enter for new line</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Tools -->
+  <div class="right-panel">
+    <div class="right-header">
+      <div class="right-title">Studio</div>
+    </div>
+    <div class="right-panel-scroll">
+
+      <!-- Overview -->
+      <div class="tool-card" id="tc-overview">
+        <div class="tool-card-head" onclick="toggleCard('overview')">
+          <div class="tool-card-left">
+            <span class="tool-icon">📋</span>
+            <span class="tool-name">Project overview</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-overview">Idle</span>
+            <button class="tool-gen-btn btn-overview" id="gb-overview" onclick="event.stopPropagation();runTool('overview')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-overview">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-overview"><div class="ls"></div>Analysing project...</div>
+            <div class="tool-empty-msg" id="te-overview">Generate a summary of your entire project</div>
+            <div class="tool-result-wrap" id="tr-overview">
+              <div class="meta-tags" id="tr-overview-meta"></div>
+              <div class="overview-text" id="tr-overview-text"></div>
+              <div style="font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Key topics</div>
+              <div class="topic-tags" id="tr-overview-topics"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PPT -->
+      <div class="tool-card" id="tc-ppt">
+        <div class="tool-card-head" onclick="toggleCard('ppt')">
+          <div class="tool-card-left">
+            <span class="tool-icon">📊</span>
+            <span class="tool-name">Presentation</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-ppt">Idle</span>
+            <button class="tool-gen-btn btn-ppt" id="gb-ppt" onclick="event.stopPropagation();runTool('ppt')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-ppt">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-ppt"><div class="ls"></div>Building slides...</div>
+            <div class="tool-empty-msg" id="te-ppt">AI creates a full branded .pptx from your sources</div>
+            <div class="tool-result-wrap" id="tr-ppt">
+              <div class="tool-dl-row">
+                <button class="dl-btn" onclick="dlPPT()">⬇ Download .pptx</button>
+              </div>
+              <div class="ppt-grid" id="tr-ppt-slides"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Block diagram -->
+      <div class="tool-card" id="tc-diagram">
+        <div class="tool-card-head" onclick="toggleCard('diagram')">
+          <div class="tool-card-left">
+            <span class="tool-icon">⬛</span>
+            <span class="tool-name">Block diagram</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-diagram">Idle</span>
+            <button class="tool-gen-btn btn-diagram" id="gb-diagram" onclick="event.stopPropagation();runTool('diagram')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-diagram">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-diagram"><div class="ls"></div>Mapping architecture...</div>
+            <div class="tool-empty-msg" id="te-diagram">Visual system block diagram with connections</div>
+            <div class="tool-result-wrap" id="tr-diagram">
+              <div class="tool-dl-row">
+                <button class="dl-btn" onclick="dlSVG('diagram')">⬇ SVG</button>
+                <button class="dl-btn" onclick="dlPNG('svgwrap-diagram')">⬇ PNG</button>
+              </div>
+              <div class="svg-output" id="svgwrap-diagram"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flowchart -->
+      <div class="tool-card" id="tc-flowchart">
+        <div class="tool-card-head" onclick="toggleCard('flowchart')">
+          <div class="tool-card-left">
+            <span class="tool-icon">🔀</span>
+            <span class="tool-name">Flowchart</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-flowchart">Idle</span>
+            <button class="tool-gen-btn btn-flowchart" id="gb-flowchart" onclick="event.stopPropagation();runTool('flowchart')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-flowchart">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-flowchart"><div class="ls"></div>Mapping process flow...</div>
+            <div class="tool-empty-msg" id="te-flowchart">Process flowchart with decision points</div>
+            <div class="tool-result-wrap" id="tr-flowchart">
+              <div class="tool-dl-row">
+                <button class="dl-btn" onclick="dlSVG('flowchart')">⬇ SVG</button>
+              </div>
+              <div class="svg-output" id="svgwrap-flowchart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mind map -->
+      <div class="tool-card" id="tc-mindmap">
+        <div class="tool-card-head" onclick="toggleCard('mindmap')">
+          <div class="tool-card-left">
+            <span class="tool-icon">🧠</span>
+            <span class="tool-name">Mind map</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-mindmap">Idle</span>
+            <button class="tool-gen-btn btn-mindmap" id="gb-mindmap" onclick="event.stopPropagation();runTool('mindmap')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-mindmap">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-mindmap"><div class="ls"></div>Mapping concepts...</div>
+            <div class="tool-empty-msg" id="te-mindmap">Visual concept map of all project topics</div>
+            <div class="tool-result-wrap" id="tr-mindmap">
+              <div class="tool-dl-row">
+                <button class="dl-btn" onclick="dlSVG('mindmap')">⬇ SVG</button>
+              </div>
+              <div class="svg-output" id="svgwrap-mindmap"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="tool-card" id="tc-timeline">
+        <div class="tool-card-head" onclick="toggleCard('timeline')">
+          <div class="tool-card-left">
+            <span class="tool-icon">📅</span>
+            <span class="tool-name">Timeline</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-timeline">Idle</span>
+            <button class="tool-gen-btn btn-timeline" id="gb-timeline" onclick="event.stopPropagation();runTool('timeline')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-timeline">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-timeline"><div class="ls"></div>Extracting events...</div>
+            <div class="tool-empty-msg" id="te-timeline">Project milestones and events timeline</div>
+            <div class="tool-result-wrap" id="tr-timeline">
+              <div id="tr-timeline-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Executive briefing -->
+      <div class="tool-card" id="tc-briefing">
+        <div class="tool-card-head" onclick="toggleCard('briefing')">
+          <div class="tool-card-left">
+            <span class="tool-icon">📰</span>
+            <span class="tool-name">Executive briefing</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-briefing">Idle</span>
+            <button class="tool-gen-btn btn-briefing" id="gb-briefing" onclick="event.stopPropagation();runTool('briefing')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-briefing">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-briefing"><div class="ls"></div>Writing briefing...</div>
+            <div class="tool-empty-msg" id="te-briefing">One-page brief with facts, risks, actions</div>
+            <div class="tool-result-wrap" id="tr-briefing">
+              <div id="tr-briefing-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="tool-card" id="tc-faq">
+        <div class="tool-card-head" onclick="toggleCard('faq')">
+          <div class="tool-card-left">
+            <span class="tool-icon">❓</span>
+            <span class="tool-name">FAQ</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-faq">Idle</span>
+            <button class="tool-gen-btn btn-faq" id="gb-faq" onclick="event.stopPropagation();runTool('faq')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-faq">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-faq"><div class="ls"></div>Generating questions...</div>
+            <div class="tool-empty-msg" id="te-faq">Top questions and answers from your sources</div>
+            <div class="tool-result-wrap" id="tr-faq">
+              <div id="tr-faq-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Word report -->
+      <div class="tool-card" id="tc-report">
+        <div class="tool-card-head" onclick="toggleCard('report')">
+          <div class="tool-card-left">
+            <span class="tool-icon">📄</span>
+            <span class="tool-name">Word report</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tool-status status-idle" id="ts-report">Idle</span>
+            <button class="tool-gen-btn btn-report" id="gb-report" onclick="event.stopPropagation();runTool('report')" title="Generate">▶</button>
+          </div>
+        </div>
+        <div class="tool-body" id="tb-report">
+          <div class="tool-content">
+            <div class="loading-row" id="tl-report"><div class="ls"></div>Writing report...</div>
+            <div class="tool-empty-msg" id="te-report">Full .docx technical report with cover page and TOC</div>
+            <div class="tool-result-wrap" id="tr-report">
+              <div class="tool-dl-row">
+                <button class="dl-btn" onclick="dlReport()">⬇ Download .docx</button>
+              </div>
+              <div style="font-size:11px;color:#555;background:#f9f9f8;border-radius:6px;padding:8px;line-height:1.6">Report generated — includes cover page, executive summary, technical specs, and conclusions.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const PID       = {{ project.id }};
+const PROJ      = '{{ project.name|replace("'","\\'") }}';
+const INITIALS  = '{{ current_user.full_name[:2].upper() }}';
+const BLOCKED   = ['exe','dll','so','bin','iso','mp4','mp3','jpg','jpeg','png','gif','bmp','ico'];
+let convId      = {{ active_conv_id or 'null' }};
+let streaming   = false;
+const svgStore  = {};
+let pptBlob     = null;
+let reportBlob  = null;
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+async function srcUpload(files, field) {
+  const filtered = Array.from(files).filter(f => !BLOCKED.includes(f.name.split('.').pop().toLowerCase()));
+  if (!filtered.length) { alert('No supported files'); return; }
+  const mini = document.getElementById('uploadMini');
+  mini.style.display = 'flex';
+  document.getElementById('uploadMiniMsg').textContent = `Indexing ${filtered.length} file(s)...`;
+  const fd = new FormData();
+  filtered.forEach(f => fd.append(field, f, f.webkitRelativePath || f.name));
+  try {
+    const res  = await fetch(`/project/${PID}/upload`, { method:'POST', body:fd });
+    const data = await res.json();
+    const ok   = (data.results||[]).filter(r=>r.success).length;
+    mini.style.display = 'none';
+    alert(`${ok}/${filtered.length} files indexed. Refresh to see in sources list.`);
+  } catch(e) { mini.style.display='none'; alert('Upload error: '+e.message); }
+  ['srcFileInput','srcFolderInput'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+// ── Tool cards ────────────────────────────────────────────────────────────────
+function toggleCard(id) {
+  const body = document.getElementById('tb-'+id);
+  body.classList.toggle('open');
+}
+
+function setToolState(id, state) {
+  const badge = document.getElementById('ts-'+id);
+  const btn   = document.getElementById('gb-'+id);
+  const loading = document.getElementById('tl-'+id);
+  if (state==='loading') {
+    badge.textContent='Generating'; badge.className='tool-status status-loading';
+    if(btn) btn.disabled=true;
+    if(loading) loading.style.display='flex';
+  } else if (state==='ready') {
+    badge.textContent='Ready'; badge.className='tool-status status-ready';
+    if(btn) btn.disabled=false;
+    if(loading) loading.style.display='none';
+  } else {
+    badge.textContent='Idle'; badge.className='tool-status status-idle';
+    if(btn) btn.disabled=false;
+    if(loading) loading.style.display='none';
+  }
+}
+
+function showToolResult(id) {
+  document.getElementById('te-'+id).style.display = 'none';
+  document.getElementById('tr-'+id).classList.add('show');
+  document.getElementById('tb-'+id).classList.add('open');
+}
+
+// ── Run tool dispatcher ───────────────────────────────────────────────────────
+async function runTool(id) {
+  const endpoints = {
+    overview:  `/project/${PID}/generate-overview`,
+    ppt:       `/project/${PID}/generate-ppt`,
+    diagram:   `/project/${PID}/generate-diagram`,
+    flowchart: `/project/${PID}/generate-flowchart`,
+    mindmap:   `/project/${PID}/generate-mindmap`,
+    timeline:  `/project/${PID}/generate-timeline`,
+    briefing:  `/project/${PID}/generate-briefing`,
+    faq:       `/project/${PID}/generate-faq`,
+    report:    `/project/${PID}/generate-report`,
+  };
+  const ep = endpoints[id];
+  if (!ep) return;
+
+  setToolState(id, 'loading');
+  document.getElementById('tb-'+id).classList.add('open');
+
+  try {
+    const res = await fetch(ep, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+
+    if (id==='ppt' || id==='report') {
+      if (!res.ok) { const e=await res.json(); alert(e.error||'Error'); setToolState(id,'idle'); return; }
+      const blob = await res.blob();
+      if (id==='ppt')    { pptBlob=blob; buildPPTPreview(); showToolResult('ppt'); }
+      if (id==='report') { reportBlob=blob; showToolResult('report'); }
+      setToolState(id, 'ready');
+      return;
+    }
+
+    const data = await res.json();
+    if (data.error) { alert(data.error); setToolState(id,'idle'); return; }
+
+    if (id==='overview')  renderOverview(data);
+    if (id==='diagram')   renderSVGTool('diagram',  data.svg);
+    if (id==='flowchart') renderSVGTool('flowchart', buildFlowSVG(data));
+    if (id==='mindmap')   renderSVGTool('mindmap',   buildMindSVG(data));
+    if (id==='timeline')  renderTimeline(data);
+    if (id==='briefing')  renderBriefing(data);
+    if (id==='faq')       renderFAQ(data);
+
+    setToolState(id, 'ready');
+
+  } catch(e) { alert('Error: '+e.message); setToolState(id,'idle'); }
+}
+
+// ── Renderers ─────────────────────────────────────────────────────────────────
+function renderOverview(d) {
+  document.getElementById('tr-overview-meta').innerHTML = `
+    <span class="meta-tag tag-blue">${d.project_type||'Project'}</span>
+    <span class="meta-tag tag-green">${d.status||'Active'}</span>
+    <span class="meta-tag tag-amber">${d.complexity||'Medium'} complexity</span>`;
+  document.getElementById('tr-overview-text').textContent = d.abstract||'';
+  document.getElementById('tr-overview-topics').innerHTML =
+    (d.key_topics||[]).map(t=>`<span class="topic-tag" onclick="chip_text('${t.replace(/'/g,"\\'")}')}">${t}</span>`).join('');
+  showToolResult('overview');
+}
+
+function renderSVGTool(id, svg) {
+  svgStore[id] = svg;
+  document.getElementById('svgwrap-'+id).innerHTML = svg;
+  showToolResult(id);
+}
+
+function buildFlowSVG(data) {
+  const nodes=data.nodes||[], edges=data.edges||[], title=data.title||'Flowchart';
+  const W=140,H=48,PAD=72,SX=120,SY=70,svgW=380;
+  const pos={};
+  nodes.forEach((n,i)=>{pos[n.id]={x:SX,y:SY+i*(H+PAD),cx:SX+W/2,cy:SY+i*(H+PAD)+H/2};});
+  const svgH=SY+nodes.length*(H+PAD)+40;
+  const C={start:{f:'#0a2e1a',s:'#1D9E75',t:'#6ee7b7'},end:{f:'#3b1a1a',s:'#E24B4A',t:'#fca5a5'},process:{f:'#0a1628',s:'#378ADD',t:'#7ec8f8'},decision:{f:'#2a1a3b',s:'#7F77DD',t:'#c4b5fd'},io:{f:'#2e2a0a',s:'#BA7517',t:'#fcd34d'}};
+  let p=[`<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;background:#0a0f1e;border-radius:8px;font-family:sans-serif">`];
+  p.push(`<text x="${svgW/2}" y="26" text-anchor="middle" font-size="12" font-weight="500" fill="#7ec8f8">${title}</text>`);
+  edges.forEach(e=>{
+    const f=pos[e.from],t=pos[e.to];if(!f||!t)return;
+    const x1=f.cx,y1=f.cy+H/2,x2=t.cx,y2=t.cy-H/2;
+    p.push(`<defs><marker id="a${e.from}${e.to}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#378ADD" stroke-width="1.5"/></marker></defs>`);
+    p.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#378ADD" stroke-width="1.5" opacity="0.6" marker-end="url(#a${e.from}${e.to})"/>`);
+    if(e.label){const mx=(x1+x2)/2,my=(y1+y2)/2;p.push(`<text x="${mx+6}" y="${my}" font-size="9" fill="#5F5E5A">${e.label}</text>`);}
+  });
+  nodes.forEach(n=>{
+    const pp=pos[n.id];if(!pp)return;
+    const c=C[n.type]||C.process,{x,y}=pp;
+    if(n.type==='decision'){const cx=x+W/2,cy=y+H/2;p.push(`<polygon points="${cx},${y} ${x+W},${cy} ${cx},${y+H} ${x},${cy}" fill="${c.f}" stroke="${c.s}" stroke-width="1.5"/>`);}
+    else if(n.type==='start'||n.type==='end'){p.push(`<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="${H/2}" fill="${c.f}" stroke="${c.s}" stroke-width="1.5"/>`);}
+    else{p.push(`<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="7" fill="${c.f}" stroke="${c.s}" stroke-width="1.5"/>`);}
+    p.push(`<text x="${x+W/2}" y="${y+H/2+5}" text-anchor="middle" font-size="11" font-weight="500" fill="${c.t}">${n.label}</text>`);
+  });
+  p.push('</svg>');
+  return p.join('');
+}
+
+function buildMindSVG(data) {
+  const center=data.center||'Project', branches=data.branches||[];
+  const CX=240,CY=200,svgW=480,svgH=400,BR=110,SR=185;
+  const CM={blue:{f:'#1e3a5f',s:'#378ADD',t:'#7ec8f8'},green:{f:'#0a2e1a',s:'#1D9E75',t:'#6ee7b7'},amber:{f:'#2e2a0a',s:'#BA7517',t:'#fcd34d'},purple:{f:'#2a1a3b',s:'#7F77DD',t:'#c4b5fd'},coral:{f:'#3b1a1a',s:'#E24B4A',t:'#fca5a5'}};
+  const angles=branches.map((_,i)=>(i/branches.length)*2*Math.PI-Math.PI/2);
+  let p=[`<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;background:#0a0f1e;border-radius:8px;font-family:sans-serif">`];
+  p.push(`<circle cx="${CX}" cy="${CY}" r="46" fill="#0a1628" stroke="#378ADD" stroke-width="2"/>`);
+  const cw=center.split(' ');
+  cw.forEach((w,i)=>p.push(`<text x="${CX}" y="${CY+(i-(cw.length-1)/2)*13}" text-anchor="middle" font-size="10" font-weight="500" fill="#7ec8f8">${w}</text>`));
+  branches.forEach((b,i)=>{
+    const ang=angles[i],bx=CX+Math.cos(ang)*BR,by=CY+Math.sin(ang)*BR;
+    const c=CM[b.color]||CM.blue;
+    p.push(`<line x1="${CX}" y1="${CY}" x2="${bx}" y2="${by}" stroke="${c.s}" stroke-width="1.5" opacity="0.4"/>`);
+    p.push(`<rect x="${bx-44}" y="${by-14}" width="88" height="28" rx="14" fill="${c.f}" stroke="${c.s}" stroke-width="1.5"/>`);
+    p.push(`<text x="${bx}" y="${by+5}" text-anchor="middle" font-size="10" font-weight="500" fill="${c.t}">${b.topic}</text>`);
+    (b.subtopics||[]).forEach((s,j)=>{
+      const subs=b.subtopics||[],sa=ang+(j-(subs.length-1)/2)*0.38;
+      const sx=CX+Math.cos(sa)*SR,sy=CY+Math.sin(sa)*SR;
+      p.push(`<line x1="${bx}" y1="${by}" x2="${sx}" y2="${sy}" stroke="${c.s}" stroke-width="1" opacity="0.3"/>`);
+      p.push(`<rect x="${sx-30}" y="${sy-10}" width="60" height="20" rx="4" fill="${c.f}" stroke="${c.s}" stroke-width="1" opacity="0.7"/>`);
+      p.push(`<text x="${sx}" y="${sy+5}" text-anchor="middle" font-size="9" fill="${c.t}">${s.length>9?s.slice(0,9)+'…':s}</text>`);
+    });
+  });
+  p.push('</svg>');
+  return p.join('');
+}
+
+function renderTimeline(d) {
+  const events=d.events||[];
+  document.getElementById('tr-timeline-content').innerHTML = events.map((e,i)=>`
+    <div class="timeline-item-small">
+      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+        <div class="tl-dot ${e.type||'task'}"></div>
+        ${i<events.length-1?'<div style="width:2px;flex:1;background:#f0f0f0;margin:3px 0"></div>':''}
+      </div>
+      <div style="flex:1;padding-bottom:4px">
+        <div class="tl-date">${e.date||''}</div>
+        <div class="tl-title">${e.title||''}</div>
+        <div class="tl-desc">${e.description||''}</div>
+      </div>
+    </div>`).join('');
+  showToolResult('timeline');
+}
+
+function renderBriefing(d) {
+  document.getElementById('tr-briefing-content').innerHTML = `
+    <div class="briefing-block">
+      <div class="briefing-label">Situation</div>
+      <div style="font-size:11px;color:#555;line-height:1.6">${d.situation||''}</div>
+    </div>
+    <div class="briefing-block">
+      <div class="briefing-label">Key facts</div>
+      ${(d.key_facts||[]).map(f=>`<div class="briefing-line">• ${f}</div>`).join('')}
+    </div>
+    <div class="briefing-block">
+      <div class="briefing-label">Risks</div>
+      ${(d.risks||[]).map(r=>`<div class="briefing-line" style="color:#dc2626">! ${r}</div>`).join('')}
+    </div>
+    <div class="briefing-block">
+      <div class="briefing-label">Recommendations</div>
+      ${(d.recommendations||[]).map(r=>`<div class="briefing-line" style="color:#16a34a">✓ ${r}</div>`).join('')}
+    </div>
+    <div class="briefing-block">
+      <div class="briefing-label">Action items</div>
+      ${(d.action_items||[]).map(a=>`
+        <div class="action-mini">
+          <span>${a.action||''}</span>
+          <span class="pri-${(a.priority||'m')[0].toLowerCase()}">${a.priority||'Med'}</span>
+        </div>`).join('')}
+    </div>`;
+  showToolResult('briefing');
+}
+
+function renderFAQ(d) {
+  document.getElementById('tr-faq-content').innerHTML = (d.faqs||[]).map((f,i)=>`
+    <div class="faq-item">
+      <div class="faq-q" onclick="document.getElementById('fa${i}').classList.toggle('open')">
+        <span>${f.q||''}</span><span style="color:#bbb;font-size:10px;flex-shrink:0">▼</span>
+      </div>
+      <div class="faq-a" id="fa${i}">${f.a||''}</div>
+    </div>`).join('');
+  showToolResult('faq');
+}
+
+function buildPPTPreview() {
+  const slides=['Title','Overview','Specs','Architecture','Details','Findings','Conclusion','End'];
+  document.getElementById('tr-ppt-slides').innerHTML = slides.map((s,i)=>`
+    <div class="slide-mini">
+      <div class="slide-mini-num">${i+1}</div>
+      <div class="slide-mini-title">${s}</div>
+    </div>`).join('');
+}
+
+// ── Downloads ─────────────────────────────────────────────────────────────────
+function dlPPT() {
+  if (!pptBlob) { alert('Generate PPT first'); return; }
+  const url=URL.createObjectURL(pptBlob),a=document.createElement('a');
+  a.href=url; a.download=PROJ.replace(/\s+/g,'_')+'_presentation.pptx';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function dlReport() {
+  if (!reportBlob) { alert('Generate report first'); return; }
+  const url=URL.createObjectURL(reportBlob),a=document.createElement('a');
+  a.href=url; a.download=PROJ.replace(/\s+/g,'_')+'_report.docx';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function dlSVG(id) {
+  const svg=svgStore[id];
+  if (!svg) { alert('Generate first'); return; }
+  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+  const a=document.createElement('a');
+  a.href=url; a.download=PROJ.replace(/\s+/g,'_')+'_'+id+'.svg';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function dlPNG(wrapperId) {
+  const svgEl=document.querySelector('#'+wrapperId+' svg');
+  if (!svgEl) { alert('Generate first'); return; }
+  const vb=svgEl.viewBox.baseVal,canvas=document.createElement('canvas');
+  canvas.width=vb.width||700; canvas.height=vb.height||500;
+  const ctx=canvas.getContext('2d'),img=new Image();
+  const url=URL.createObjectURL(new Blob([svgEl.outerHTML],{type:'image/svg+xml;charset=utf-8'}));
+  img.onload=function(){
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    URL.revokeObjectURL(url);
+    const a=document.createElement('a');a.href=canvas.toDataURL('image/png');
+    a.download=PROJ.replace(/\s+/g,'_')+'_diagram.png';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  };
+  img.src=url;
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+function chip(el) { document.getElementById('chatInput').value=el.textContent; sendMsg(); }
+function chip_text(t) { document.getElementById('chatInput').value=t; sendMsg(); }
+
+function newChat() {
+  if (streaming) return;
+  convId=null;
+  document.getElementById('messages').innerHTML='';
+  document.getElementById('messages').style.display='none';
+  document.getElementById('welcomeState').style.display='flex';
+  document.querySelectorAll('.conv-item').forEach(c=>c.classList.remove('active'));
+}
+
+function loadConv(id) {
+  if (streaming) return;
+  window.location.href=`/project/${PID}/chat/${id}`;
+}
+
+async function sendMsg() {
+  if (streaming) return;
+  const input=document.getElementById('chatInput');
+  const msg=input.value.trim();
+  if (!msg) return;
+  streaming=true;
+  document.getElementById('sendBtn').disabled=true;
+  document.getElementById('welcomeState').style.display='none';
+  document.getElementById('messages').style.display='flex';
+  addUserMsg(msg);
+  input.value=''; input.style.height='auto';
+  const botRow=makeBotRow();
+  const bubbleEl=botRow.querySelector('.bubble');
+  const srcRow=botRow.querySelector('.sources-row');
+  document.getElementById('messages').appendChild(botRow);
+  scroll();
+  document.getElementById('streamRow').style.display='flex';
+  try {
+    const res=await fetch(`/api/project/${PID}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,conversation_id:convId})});
+    const reader=res.body.getReader(),decoder=new TextDecoder();
+    let buf='',full='';
+    const cursor=document.createElement('span');
+    cursor.className='cursor-blink';
+    bubbleEl.appendChild(cursor);
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      buf+=decoder.decode(value,{stream:true});
+      const lines=buf.split('\n');buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data: '))continue;
+        try{
+          const d=JSON.parse(line.slice(6));
+          if(d.type==='meta'){
+            if(d.is_new&&d.conversation_id){
+              convId=d.conversation_id;
+              window.history.pushState({},'',`/project/${PID}/chat/${convId}`);
+              addToSidebar(convId,msg);
+            }
+            (d.sources||[]).forEach(s=>{const c=document.createElement('span');c.className='src-chip';c.textContent='📄 '+s.filename;srcRow.appendChild(c);});
+          }
+          if(d.type==='token'){full+=d.text;if(cursor.parentNode)cursor.parentNode.removeChild(cursor);bubbleEl.textContent=full;bubbleEl.appendChild(cursor);scroll();}
+          if(d.type==='done'){if(cursor.parentNode)cursor.parentNode.removeChild(cursor);bubbleEl.textContent=full;}
+        }catch(e){}
+      }
+    }
+    if(cursor.parentNode)cursor.parentNode.removeChild(cursor);
+  } catch(e){bubbleEl.textContent='Connection error. Make sure Ollama is running.';}
+  document.getElementById('streamRow').style.display='none';
+  document.getElementById('sendBtn').disabled=false;
+  streaming=false; scroll();
+}
+
+function scroll(){const m=document.getElementById('messages');m.scrollTop=m.scrollHeight;}
+
+function makeBotRow(){
+  const row=document.createElement('div');row.className='msg-row bot';
+  row.innerHTML=`<div class="msg-inner"><div class="avatar">📁</div><div class="msg-body"><div class="sender-label">Project AI</div><div class="bubble"></div><div class="sources-row"></div></div></div>`;
+  return row;
+}
+
+function addUserMsg(text){
+  const messages=document.getElementById('messages');
+  const row=document.createElement('div');row.className='msg-row user';
+  row.innerHTML=`<div class="msg-inner"><div class="avatar">${INITIALS}</div><div class="msg-body"><div class="bubble">${text}</div></div></div>`;
+  messages.appendChild(row);scroll();
+}
+
+function addToSidebar(id,title){
+  const body=document.querySelector('.left-panel .panel-scroll:last-of-type');
+  const empty=document.querySelector('.left-panel .panel-scroll div[style]');
+  if(empty)empty.remove();
+  let tg=document.querySelector('.date-label');
+  if(!tg||tg.textContent.trim()!=='Today'){
+    const g=document.createElement('div');g.className='date-label';g.textContent='Today';
+    const hs=document.querySelector('.history-section .panel-scroll');
+    hs.insertBefore(g,hs.firstChild);tg=g;
+  }
+  const short=title.length>36?title.slice(0,36)+'…':title;
+  const div=document.createElement('div');div.className='conv-item active';div.id='conv-'+id;
+  div.innerHTML=`<div class="conv-title-text">${short}</div><div class="conv-meta-text">just now</div>`;
+  div.onclick=()=>loadConv(id);
+  document.querySelectorAll('.conv-item').forEach(c=>c.classList.remove('active'));
+  tg.insertAdjacentElement('afterend',div);
+}
+</script>
+</body>
+</html>

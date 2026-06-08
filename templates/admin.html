@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynalog AI — Manage Users</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:sans-serif; background:#f0f2f5; }
+    .topbar { background:#0a1628; color:#fff; padding:12px 20px;
+              display:flex; justify-content:space-between; align-items:center; }
+    .topbar h1 { font-size:16px; }
+    .topbar a { color:#aab8d4; text-decoration:none; font-size:13px; }
+    .container { max-width:900px; margin:30px auto; padding:0 20px; }
+    .card { background:#fff; border-radius:12px; padding:24px;
+            border:1px solid #e5e7eb; margin-bottom:24px; }
+    h2 { font-size:16px; font-weight:600; margin-bottom:16px; color:#0a1628; }
+    label { font-size:13px; color:#444; font-weight:500; display:block; margin-bottom:5px; }
+    input, select { width:100%; padding:9px 12px; border:1px solid #ddd;
+                    border-radius:7px; font-size:14px; margin-bottom:14px; }
+    .btn { padding:10px 20px; background:#0a1628; color:#fff; border:none;
+           border-radius:7px; cursor:pointer; font-size:14px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th { text-align:left; padding:10px 12px; background:#f8f9fa;
+         border-bottom:1px solid #e5e7eb; font-size:12px; color:#666; }
+    td { padding:10px 12px; border-bottom:1px solid #f0f0f0; }
+    .badge { padding:3px 8px; border-radius:12px; font-size:11px; font-weight:500; }
+    .badge.admin { background:#fef3c7; color:#92400e; }
+    .badge.staff { background:#e8f0fe; color:#1a56db; }
+    .del-btn { color:#dc2626; font-size:12px; text-decoration:none; }
+    .flash { background:#f0fdf4; color:#16a34a; padding:10px 14px;
+             border-radius:8px; font-size:13px; margin-bottom:16px; }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <h1>🛡️ Dynalog AI — User Management</h1>
+  <a href="/chat">← Back to Chat</a>
+</div>
+<div class="container">
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash">{{ messages[0] }}</div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="card">
+    <h2>Add New Staff Member</h2>
+    <form method="POST">
+      <label>Full Name</label>
+      <input type="text" name="full_name" placeholder="e.g. Major Raj Sharma" required>
+      <label>Username</label>
+      <input type="text" name="username" placeholder="e.g. raj.sharma" required>
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Set a strong password" required>
+      <label>Role</label>
+      <select name="role">
+        <option value="staff">Staff</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button type="submit" class="btn">Add User</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>All Users ({{ users|length }})</h2>
+    <table>
+      <tr>
+        <th>Full Name</th>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Action</th>
+      </tr>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.full_name }}</td>
+        <td>{{ user.username }}</td>
+        <td><span class="badge {{ user.role }}">{{ user.role }}</span></td>
+        <td>
+          {% if user.username != 'admin' %}
+            <a href="/admin/delete-user/{{ user.id }}" class="del-btn"
+               onclick="return confirm('Delete {{ user.full_name }}?')">Delete</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+</body>
+</html>

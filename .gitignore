@@ -1,0 +1,14 @@
+.env
+data/
+uploads/
+__pycache__/
+*.pyc
+*.pyo
+venv/
+*.db
+data/chroma/
+.DS_Store
+Thumbs.db
+*.egg-info/
+dist/
+build/

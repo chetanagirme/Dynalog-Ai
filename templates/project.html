@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ project.name }} — Dynalog PIS</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9f9f8;color:#1a1a1a}
+    .topbar{background:#fff;border-bottom:1px solid #e8e8e5;padding:0 24px;height:56px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+    .topbar-left{display:flex;align-items:center;gap:10px}
+    .logo{width:32px;height:32px;background:#0a1628;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600}
+    .breadcrumb{font-size:13px;color:#888}
+    .breadcrumb a{color:#555;text-decoration:none}
+    .breadcrumb a:hover{color:#0a1628}
+    .topbar-right{display:flex;align-items:center;gap:8px}
+    .btn-link{font-size:13px;color:#555;text-decoration:none;padding:6px 12px;border-radius:8px;border:1px solid #e8e8e5;background:#fff;cursor:pointer;transition:background .15s}
+    .btn-link:hover{background:#f5f5f3}
+    .chat-btn{background:#0a1628;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;text-decoration:none;font-weight:500}
+    .page{display:flex;height:calc(100vh - 56px)}
+
+    /* Left sidebar */
+    .left-sidebar{width:240px;background:#fff;border-right:1px solid #e8e8e5;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+    .sidebar-section{padding:14px;border-bottom:1px solid #f0f0f0}
+    .sidebar-label{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+    .file-item-small{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #f5f5f5;font-size:12px;color:#555}
+    .file-item-small:last-child{border-bottom:none}
+    .file-dot{width:6px;height:6px;border-radius:50%;background:#16a34a;flex-shrink:0}
+    .topic-chip{display:inline-block;background:#f0f0ed;border:1px solid #e0e0db;border-radius:20px;padding:4px 10px;font-size:11px;color:#444;cursor:pointer;margin:3px 2px;transition:all .15s}
+    .topic-chip:hover{background:#0a1628;color:#fff;border-color:#0a1628}
+    .upload-mini-btn{width:100%;padding:8px;background:#f5f5f3;border:1px dashed #ccc;border-radius:8px;font-size:12px;cursor:pointer;color:#666;transition:all .15s;margin-top:8px}
+    .upload-mini-btn:hover{background:#0a1628;color:#fff;border-color:#0a1628}
+    #miniFileInput,#miniFolderInput{display:none}
+    .indexing-mini{display:none;font-size:11px;color:#1d4ed8;padding:6px 0;align-items:center;gap:6px}
+    .spinner-sm{width:12px;height:12px;border:1.5px solid #bfdbfe;border-top-color:#1d4ed8;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Main content */
+    .main-content{flex:1;overflow-y:auto;padding:24px}
+
+    /* Right sidebar */
+    .right-sidebar{width:280px;background:#fff;border-left:1px solid #e8e8e5;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+
+    /* Overview panel */
+    .overview-panel{background:#fff;border:1px solid #e8e8e5;border-radius:14px;padding:20px;margin-bottom:16px}
+    .overview-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .overview-title{font-size:15px;font-weight:500}
+    .gen-overview-btn{font-size:12px;color:#185FA5;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:5px 10px;cursor:pointer;transition:all .15s}
+    .gen-overview-btn:hover{background:#185FA5;color:#fff}
+    .overview-content{display:none}
+    .overview-content.show{display:block}
+    .overview-abstract{font-size:13px;color:#555;line-height:1.7;margin-bottom:12px;padding:12px;background:#f9f9f8;border-radius:8px;border-left:3px solid #0a1628}
+    .overview-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .meta-badge{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500}
+    .meta-type{background:#e8f0fe;color:#1a56db}
+    .meta-status{background:#f0fdf4;color:#16a34a}
+    .meta-complexity{background:#fef9ec;color:#ca8a04}
+    .overview-loading{font-size:13px;color:#888;padding:12px 0;display:none;align-items:center;gap:8px}
+
+    /* Tool cards grid */
+    .tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+    .tool-panel{background:#fff;border:1px solid #e8e8e5;border-radius:14px;overflow:hidden}
+    .tool-header{padding:14px 16px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
+    .tool-title{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
+    .tool-gen-btn{font-size:11px;padding:5px 10px;border-radius:6px;border:none;cursor:pointer;font-weight:500;transition:all .15s;white-space:nowrap}
+    .tool-gen-btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn-ppt{background:#0a1628;color:#fff}
+    .btn-ppt:hover:not(:disabled){background:#1a2e4a}
+    .btn-diagram{background:#0F6E56;color:#fff}
+    .btn-diagram:hover:not(:disabled){background:#085240}
+    .btn-flowchart{background:#534AB7;color:#fff}
+    .btn-flowchart:hover:not(:disabled){background:#3c3489}
+    .btn-mindmap{background:#854F0B;color:#fff}
+    .btn-mindmap:hover:not(:disabled){background:#633806}
+    .btn-timeline{background:#185FA5;color:#fff}
+    .btn-timeline:hover:not(:disabled){background:#0c447c}
+    .btn-briefing{background:#A32D2D;color:#fff}
+    .btn-briefing:hover:not(:disabled){background:#791f1f}
+    .tool-body{padding:14px 16px;min-height:80px}
+    .tool-loading{display:none;align-items:center;gap:8px;font-size:12px;color:#888;padding:8px 0}
+    .tool-spinner{width:14px;height:14px;border:2px solid #e0e0db;border-top-color:#0a1628;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+    .tool-empty{font-size:12px;color:#bbb;text-align:center;padding:16px 0;line-height:1.5}
+    .tool-result{display:none}
+    .tool-result.show{display:block}
+    .tool-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #f0f0f0}
+    .tool-result-title{font-size:12px;font-weight:500;color:#555}
+    .dl-btns{display:flex;gap:6px}
+    .dl-btn{font-size:11px;padding:4px 8px;border:1px solid #e0e0db;border-radius:5px;background:#fff;cursor:pointer;color:#444;transition:all .15s}
+    .dl-btn:hover{background:#0a1628;color:#fff;border-color:#0a1628}
+
+    /* SVG output */
+    .svg-wrap{background:#0a0f1e;border-radius:8px;overflow:hidden}
+
+    /* PPT preview */
+    .ppt-preview{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .slide-thumb{background:#0a1628;border-radius:5px;padding:8px;aspect-ratio:4/3;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+    .slide-num{font-size:9px;color:#378ADD;margin-bottom:4px}
+    .slide-title{font-size:10px;color:#fff;font-weight:500;line-height:1.2}
+
+    /* FAQ */
+    .faq-item{border-bottom:1px solid #f0f0f0;padding:10px 0}
+    .faq-item:last-child{border-bottom:none}
+    .faq-q{font-size:13px;font-weight:500;color:#0a1628;margin-bottom:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+    .faq-a{font-size:12px;color:#666;line-height:1.6;display:none;margin-top:4px}
+    .faq-a.open{display:block}
+
+    /* Timeline */
+    .timeline-item{display:flex;gap:12px;margin-bottom:14px}
+    .timeline-dot-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+    .timeline-dot{width:12px;height:12px;border-radius:50%;background:#0a1628;flex-shrink:0}
+    .timeline-dot.milestone{background:#16a34a}
+    .timeline-dot.completion{background:#185FA5}
+    .timeline-dot.issue{background:#dc2626}
+    .timeline-line{width:2px;background:#e8e8e5;flex:1;margin-top:4px}
+    .timeline-content{flex:1;padding-bottom:4px}
+    .timeline-date{font-size:11px;color:#888;margin-bottom:2px}
+    .timeline-title{font-size:13px;font-weight:500;margin-bottom:2px}
+    .timeline-desc{font-size:12px;color:#666}
+
+    /* Briefing */
+    .briefing-section{margin-bottom:14px}
+    .briefing-section-title{font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+    .briefing-item{font-size:12px;color:#555;padding:4px 0;border-bottom:1px solid #f5f5f5;display:flex;align-items:flex-start;gap:6px}
+    .briefing-item:last-child{border-bottom:none}
+    .briefing-bullet{color:#0a1628;font-weight:500;flex-shrink:0}
+    .action-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 8px;background:#f9f9f8;border-radius:6px;margin-bottom:4px}
+    .priority-high{color:#dc2626;font-weight:500;font-size:10px;background:#fef2f2;padding:2px 6px;border-radius:10px}
+    .priority-medium{color:#ca8a04;font-weight:500;font-size:10px;background:#fef9ec;padding:2px 6px;border-radius:10px}
+    .priority-low{color:#16a34a;font-weight:500;font-size:10px;background:#f0fdf4;padding:2px 6px;border-radius:10px}
+
+    /* Mind map */
+    .mindmap-wrap{overflow-x:auto}
+
+    /* Activity right sidebar */
+    .right-section{padding:14px;border-bottom:1px solid #f0f0f0}
+    .right-label{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+    .activity-item{display:flex;gap:8px;margin-bottom:10px}
+    .activity-dot{width:6px;height:6px;border-radius:50%;background:#0a1628;flex-shrink:0;margin-top:5px}
+    .activity-text{font-size:11px;color:#666;line-height:1.5}
+    .activity-time{font-size:10px;color:#bbb}
+    .conv-mini{padding:8px 10px;background:#f9f9f8;border-radius:7px;border:1px solid #f0f0f0;text-decoration:none;color:inherit;display:block;margin-bottom:5px;transition:all .15s}
+    .conv-mini:hover{border-color:#0a1628}
+    .conv-mini-title{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .conv-mini-meta{font-size:10px;color:#aaa;margin-top:1px}
+    .report-btn{width:100%;padding:9px;background:#f5f5f3;border:1px solid #e0e0db;border-radius:8px;font-size:12px;cursor:pointer;color:#444;text-align:left;display:flex;align-items:center;gap:7px;transition:all .15s;margin-bottom:6px}
+    .report-btn:hover{background:#0a1628;color:#fff;border-color:#0a1628}
+    .report-btn:disabled{opacity:.5;cursor:not-allowed}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">DY</div>
+    <span class="breadcrumb"><a href="/dashboard">Projects</a> › {{ project.name }}</span>
+  </div>
+  <div class="topbar-right">
+    <a href="/project/{{ project.id }}/chat" class="chat-btn">Open AI chat</a>
+    <a href="/dashboard" class="btn-link">Dashboard</a>
+    <a href="/logout" class="btn-link">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- LEFT SIDEBAR: Files + Topics -->
+  <div class="left-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Project files ({{ files|length }})</div>
+      {% for f in files %}
+      <div class="file-item-small">
+        <div class="file-dot" style="{% if not f.indexed %}background:#ca8a04{% endif %}"></div>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ f.original_name }}">{{ f.original_name }}</span>
+      </div>
+      {% else %}
+      <div style="font-size:12px;color:#bbb;text-align:center;padding:10px 0">No files yet</div>
+      {% endfor %}
+      <input type="file" id="miniFileInput" multiple onchange="miniUpload(this.files,'files')">
+      <input type="file" id="miniFolderInput" multiple webkitdirectory onchange="miniUpload(this.files,'folder')">
+      <button class="upload-mini-btn" onclick="document.getElementById('miniFileInput').click()">+ Upload files</button>
+      <button class="upload-mini-btn" onclick="document.getElementById('miniFolderInput').click()" style="margin-top:4px">+ Upload folder</button>
+      <div class="indexing-mini" id="indexingMini">
+        <div class="spinner-sm"></div>
+        <span id="indexingMiniMsg">Indexing...</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Key topics</div>
+      <div id="topicsContainer">
+        <div style="font-size:12px;color:#bbb;text-align:center;padding:8px 0">Generate overview to see topics</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Project info</div>
+      <div style="font-size:12px;color:#666;line-height:1.6">
+        <div><strong>Created:</strong> {{ project.created_at[:10] }}</div>
+        <div style="margin-top:4px"><strong>Files:</strong> {{ files|length }} indexed</div>
+        {% if current_user.role == 'admin' %}
+        <form method="POST" action="/project/{{ project.id }}/delete"
+              onsubmit="return confirm('Delete this project?')" style="margin-top:10px">
+          <button type="submit" style="font-size:11px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:5px 10px;cursor:pointer;width:100%">Delete project</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- Overview panel -->
+    <div class="overview-panel">
+      <div class="overview-header">
+        <span class="overview-title">{{ project.name }}</span>
+        <button class="gen-overview-btn" id="overviewBtn" onclick="generateOverview()">Generate overview</button>
+      </div>
+      <div style="font-size:13px;color:#888;margin-bottom:8px">{{ project.description or 'No description.' }}</div>
+      <div class="overview-loading" id="overviewLoading">
+        <div class="spinner-sm" style="border-color:#bfdbfe;border-top-color:#1d4ed8"></div>
+        <span>AI is analysing your project files...</span>
+      </div>
+      <div class="overview-content" id="overviewContent">
+        <div class="overview-meta" id="overviewMeta"></div>
+        <div class="overview-abstract" id="overviewAbstract"></div>
+        <div style="font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Key findings</div>
+        <div id="overviewFindings"></div>
+      </div>
+    </div>
+
+    <!-- Tools grid row 1: PPT + Block Diagram -->
+    <div class="tools-grid">
+
+      <!-- PPT -->
+      <div class="tool-panel">
+        <div class="tool-header">
+          <div class="tool-title">📊 PowerPoint presentation</div>
+          <button class="tool-gen-btn btn-ppt" id="pptBtn" onclick="generatePPT()">Generate</button>
+        </div>
+        <div class="tool-body">
+          <div class="tool-loading" id="pptLoading"><div class="tool-spinner"></div>Building slides...</div>
+          <div class="tool-empty" id="pptEmpty">Click Generate — AI creates a full branded presentation from your project files</div>
+          <div class="tool-result" id="pptResult">
+            <div class="tool-toolbar">
+              <span class="tool-result-title" id="pptResultTitle">Presentation ready</span>
+              <div class="dl-btns">
+                <button class="dl-btn" onclick="downloadPPT()">⬇ Download .pptx</button>
+              </div>
+            </div>
+            <div class="ppt-preview" id="pptPreview"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Block diagram -->
+      <div class="tool-panel">
+        <div class="tool-header">
+          <div class="tool-title">⬛ Block diagram</div>
+          <button class="tool-gen-btn btn-diagram" id="diagramBtn" onclick="generateDiagram()">Generate</button>
+        </div>
+        <div class="tool-body">
+          <div class="tool-loading" id="diagramLoading"><div class="tool-spinner"></div>Analysing architecture...</div>
+          <div class="tool-empty" id="diagramEmpty">Click Generate — AI maps your system components and connections</div>
+          <div class="tool-result" id="diagramResult">
+            <div class="tool-toolbar">
+              <span class="tool-result-title">Block diagram</span>
+              <div class="dl-btns">
+                <button class="dl-btn" onclick="downloadSVG('diagram')">⬇ SVG</button>
+                <button class="dl-btn" onclick="downloadPNG('diagramSVGWrap')">⬇ PNG</button>
+              </div>
+            </div>
+            <div class="svg-wrap" id="diagramSVGWrap"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tools grid row 2: Flowchart + Mind map -->
+    <div class="tools-grid">
+
+      <!-- Flowchart -->
+      <div class="tool-panel">
+        <div class="tool-header">
+          <div class="tool-title">🔀 Flowchart</div>
+          <button class="tool-gen-btn btn-flowchart" id="flowBtn" onclick="generateFlowchart()">Generate</button>
+        </div>
+        <div class="tool-body">
+          <div class="tool-loading" id="flowLoading"><div class="tool-spinner"></div>Mapping process flow...</div>
+          <div class="tool-empty" id="flowEmpty">Click Generate — AI creates a process flowchart with decision points</div>
+          <div class="tool-result" id="flowResult">
+            <div class="tool-toolbar">
+              <span class="tool-result-title">Process flowchart</span>
+              <div class="dl-btns">
+                <button class="dl-btn" onclick="downloadSVG('flow')">⬇ SVG</button>
+              </div>
+            </div>
+            <div class="svg-wrap" id="flowSVGWrap"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mind map -->
+      <div class="tool-panel">
+        <div class="tool-header">
+          <div class="tool-title">🧠 Mind map</div>
+          <button class="tool-gen-btn btn-mindmap" id="mindmapBtn" onclick="generateMindmap()">Generate</button>
+        </div>
+        <div class="tool-body">
+          <div class="tool-loading" id="mindmapLoading"><div class="tool-spinner"></div>Mapping concepts...</div>
+          <div class="tool-empty" id="mindmapEmpty">Click Generate — AI maps all concepts and how they relate</div>
+          <div class="tool-result" id="mindmapResult">
+            <div class="tool-toolbar">
+              <span class="tool-result-title">Mind map</span>
+              <div class="dl-btns">
+                <button class="dl-btn" onclick="downloadSVG('mindmap')">⬇ SVG</button>
+              </div>
+            </div>
+            <div class="svg-wrap" id="mindmapSVGWrap"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Timeline full width -->
+    <div class="tool-panel" style="margin-bottom:14px">
+      <div class="tool-header">
+        <div class="tool-title">📅 Project timeline</div>
+        <button class="tool-gen-btn btn-timeline" id="timelineBtn" onclick="generateTimeline()">Generate</button>
+      </div>
+      <div class="tool-body">
+        <div class="tool-loading" id="timelineLoading"><div class="tool-spinner"></div>Extracting timeline events...</div>
+        <div class="tool-empty" id="timelineEmpty">Click Generate — AI extracts dates and milestones from your project files</div>
+        <div class="tool-result" id="timelineResult">
+          <div class="tool-toolbar">
+            <span class="tool-result-title">Project timeline</span>
+          </div>
+          <div id="timelineContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Executive briefing + FAQ row -->
+    <div class="tools-grid">
+
+      <!-- Executive briefing -->
+      <div class="tool-panel">
+        <div class="tool-header">
+          <div class="tool-title">📰 Executive briefing</div>
+          <button class="tool-gen-btn btn-briefing" id="briefingBtn" onclick="generateBriefing()">Generate</button>
+        </div>
+        <div class="tool-body">
+          <div class="tool-loading" id="briefingLoading"><div class="tool-spinner"></div>Writing briefing...</div>
+          <div class="tool-empty" id="briefingEmpty">Click Generate — AI writes a one-page executive briefing with action items</div>
+          <div class="tool-result" id="briefingResult">
+            <div class="tool-toolbar">
+              <span class="tool-result-title">Executive briefing</span>
+            </div>
+            <div id="briefingContent"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="tool-panel">
+        <div class="tool-header">
+          <div class="tool-title">❓ FAQ</div>
+          <button class="tool-gen-btn btn-timeline" id="faqBtn" onclick="generateFAQ()">Generate</button>
+        </div>
+        <div class="tool-body">
+          <div class="tool-loading" id="faqLoading"><div class="tool-spinner"></div>Generating questions...</div>
+          <div class="tool-empty" id="faqEmpty">Click Generate — AI creates the top questions and answers from your project</div>
+          <div class="tool-result" id="faqResult">
+            <div class="tool-toolbar">
+              <span class="tool-result-title">Frequently asked questions</span>
+            </div>
+            <div id="faqContent"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- RIGHT SIDEBAR: Activity + Downloads + Chats -->
+  <div class="right-sidebar">
+    <div class="right-section">
+      <div class="right-label">Downloads</div>
+      <button class="report-btn" id="reportBtn" onclick="downloadReport()">
+        <span>📄</span> Word report (.docx)
+      </button>
+      <button class="report-btn" onclick="downloadPPT()">
+        <span>📊</span> Presentation (.pptx)
+      </button>
+    </div>
+
+    <div class="right-section">
+      <div class="right-label">Recent chats</div>
+      {% for c in conversations %}
+      <a href="/project/{{ project.id }}/chat/{{ c.id }}" class="conv-mini">
+        <div class="conv-mini-title">{{ c.title }}</div>
+        <div class="conv-mini-meta">{{ c.msg_count }} messages · {{ c.updated_at[:10] }}</div>
+      </a>
+      {% else %}
+      <div style="font-size:12px;color:#bbb;text-align:center;padding:8px 0">No chats yet</div>
+      {% endfor %}
+    </div>
+
+    <div class="right-section">
+      <div class="right-label">Activity</div>
+      {% for a in activity[:10] %}
+      <div class="activity-item">
+        <div class="activity-dot"></div>
+        <div>
+          <div class="activity-text"><strong>{{ a.user_name }}</strong> {{ a.detail }}</div>
+          <div class="activity-time">{{ a.timestamp[:16].replace('T',' ') }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div style="font-size:12px;color:#bbb;padding:8px 0">No activity yet</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PROJECT_ID = {{ project.id }};
+const PROJ_NAME  = '{{ project.name|replace("'", "\\'") }}';
+const BLOCKED    = ['exe','dll','so','bin','iso','mp4','mp3','avi','jpg','jpeg','png','gif','bmp','ico'];
+
+// Stored SVGs for download
+const svgStore = {};
+let pptBlob    = null;
+let reportBlob = null;
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+async function miniUpload(files, field) {
+  if (!files || files.length === 0) return;
+  const filtered = Array.from(files).filter(f => !BLOCKED.includes(f.name.split('.').pop().toLowerCase()));
+  if (!filtered.length) { alert('No supported files found'); return; }
+  const mini = document.getElementById('indexingMini');
+  mini.style.display = 'flex';
+  document.getElementById('indexingMiniMsg').textContent = `Uploading ${filtered.length} file(s)...`;
+  const fd = new FormData();
+  filtered.forEach(f => fd.append(field, f, f.webkitRelativePath || f.name));
+  try {
+    const res  = await fetch(`/project/${PROJECT_ID}/upload`, { method:'POST', body:fd });
+    const data = await res.json();
+    const ok   = (data.results || []).filter(r => r.success).length;
+    mini.style.display = 'none';
+    alert(`${ok} of ${filtered.length} file(s) indexed. Refresh to see updated file list.`);
+  } catch(e) {
+    mini.style.display = 'none';
+    alert('Upload error: ' + e.message);
+  }
+  ['miniFileInput','miniFolderInput'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showLoading(id, show) {
+  document.getElementById(id+'Loading').style.display = show ? 'flex' : 'none';
+  const btn = document.getElementById(id+'Btn');
+  if (btn) btn.disabled = show;
+}
+function showResult(id) {
+  document.getElementById(id+'Empty').style.display  = 'none';
+  document.getElementById(id+'Loading').style.display = 'none';
+  document.getElementById(id+'Result').classList.add('show');
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+async function generateOverview() {
+  const btn = document.getElementById('overviewBtn');
+  btn.disabled     = true;
+  btn.textContent  = 'Generating...';
+  document.getElementById('overviewLoading').style.display = 'flex';
+  document.getElementById('overviewContent').classList.remove('show');
+
+  try {
+    const res  = await fetch(`/project/${PROJECT_ID}/generate-overview`, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+
+    document.getElementById('overviewAbstract').textContent = data.abstract || '';
+    document.getElementById('overviewMeta').innerHTML = `
+      <span class="meta-badge meta-type">${data.project_type||'Project'}</span>
+      <span class="meta-badge meta-status">${data.status||'Active'}</span>
+      <span class="meta-badge meta-complexity">Complexity: ${data.complexity||'Medium'}</span>`;
+
+    const findings = document.getElementById('overviewFindings');
+    findings.innerHTML = (data.main_findings||[]).map(f =>
+      `<div style="font-size:12px;color:#555;padding:4px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:6px"><span style="color:#0a1628;font-weight:500">→</span>${f}</div>`
+    ).join('');
+
+    // Update topics sidebar
+    const topics = document.getElementById('topicsContainer');
+    topics.innerHTML = (data.key_topics||[]).map(t =>
+      `<span class="topic-chip" onclick="askAboutTopic('${t.replace(/'/g,"\\'")}')}">${t}</span>`
+    ).join('');
+
+    document.getElementById('overviewContent').classList.add('show');
+    btn.textContent = 'Regenerate';
+
+  } catch(e) {
+    alert('Error: ' + e.message);
+    btn.textContent = 'Generate overview';
+  } finally {
+    document.getElementById('overviewLoading').style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+function askAboutTopic(topic) {
+  window.location.href = `/project/${PROJECT_ID}/chat`;
+}
+
+// ── PPT ───────────────────────────────────────────────────────────────────────
+async function generatePPT() {
+  showLoading('ppt', true);
+  document.getElementById('pptEmpty').style.display = 'none';
+  try {
+    const res = await fetch(`/project/${PROJECT_ID}/generate-ppt`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ topic: 'project overview' })
+    });
+    if (!res.ok) { const e=await res.json(); alert(e.error||'PPT error'); return; }
+    pptBlob = await res.blob();
+    document.getElementById('pptResultTitle').textContent = PROJ_NAME + ' — ' + new Date().toLocaleTimeString();
+    buildPPTPreview();
+    showResult('ppt');
+  } catch(e) { alert('Error: '+e.message); document.getElementById('pptEmpty').style.display='block'; }
+  finally { showLoading('ppt', false); }
+}
+
+function buildPPTPreview() {
+  const slides = ['Title','Overview','Specifications','Architecture','Details','Findings','Conclusion','Thank You'];
+  document.getElementById('pptPreview').innerHTML = slides.map((s,i) =>
+    `<div class="slide-thumb"><div class="slide-num">${i+1}</div><div class="slide-title">${s}</div></div>`
+  ).join('');
+}
+
+function downloadPPT() {
+  if (!pptBlob) { alert('Generate PPT first'); return; }
+  const url = URL.createObjectURL(pptBlob);
+  const a   = document.createElement('a');
+  a.href    = url;
+  a.download = PROJ_NAME.replace(/\s+/g,'_') + '_presentation.pptx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Block diagram ─────────────────────────────────────────────────────────────
+async function generateDiagram() {
+  showLoading('diagram', true);
+  document.getElementById('diagramEmpty').style.display = 'none';
+  try {
+    const res  = await fetch(`/project/${PROJECT_ID}/generate-diagram`, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    svgStore['diagram'] = data.svg;
+    document.getElementById('diagramSVGWrap').innerHTML = data.svg;
+    showResult('diagram');
+  } catch(e) { alert('Error: '+e.message); document.getElementById('diagramEmpty').style.display='block'; }
+  finally { showLoading('diagram', false); }
+}
+
+// ── Flowchart ─────────────────────────────────────────────────────────────────
+async function generateFlowchart() {
+  showLoading('flow', true);
+  document.getElementById('flowEmpty').style.display = 'none';
+  try {
+    const res  = await fetch(`/project/${PROJECT_ID}/generate-flowchart`, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    const svg  = buildFlowchartSVG(data);
+    svgStore['flow'] = svg;
+    document.getElementById('flowSVGWrap').innerHTML = svg;
+    showResult('flow');
+  } catch(e) { alert('Error: '+e.message); document.getElementById('flowEmpty').style.display='block'; }
+  finally { showLoading('flow', false); }
+}
+
+function buildFlowchartSVG(data) {
+  const nodes = data.nodes || [];
+  const edges = data.edges || [];
+  const title = data.title || 'Process Flowchart';
+  const W=120, H=50, PAD_Y=80, START_X=160, START_Y=80;
+  const svgW=440, nodePositions={};
+
+  nodes.forEach((n,i) => {
+    nodePositions[n.id] = { x: START_X, y: START_Y + i*(H+PAD_Y), cx: START_X+W/2, cy: START_Y+i*(H+PAD_Y)+H/2 };
+  });
+  const svgH = START_Y + nodes.length*(H+PAD_Y) + 40;
+
+  const colors = {
+    start:    {fill:'#0a2e1a',stroke:'#1D9E75',text:'#6ee7b7'},
+    end:      {fill:'#3b1a1a',stroke:'#E24B4A',text:'#fca5a5'},
+    process:  {fill:'#0a1628',stroke:'#378ADD',text:'#7ec8f8'},
+    decision: {fill:'#2a1a3b',stroke:'#7F77DD',text:'#c4b5fd'},
+    io:       {fill:'#2e2a0a',stroke:'#BA7517',text:'#fcd34d'},
+  };
+
+  let parts = [`<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;background:#0a0f1e;border-radius:12px;font-family:sans-serif">`];
+  parts.push(`<text x="${svgW/2}" y="30" text-anchor="middle" font-size="13" font-weight="500" fill="#7ec8f8">${title}</text>`);
+
+  // Edges
+  edges.forEach(e => {
+    const f = nodePositions[e.from], t = nodePositions[e.to];
+    if (!f||!t) return;
+    const x1=f.cx, y1=f.cy+H/2, x2=t.cx, y2=t.cy-H/2;
+    parts.push(`<defs><marker id="m${e.from}${e.to}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#378ADD" stroke-width="1.5"/></marker></defs>`);
+    parts.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#378ADD" stroke-width="1.5" opacity="0.6" marker-end="url(#m${e.from}${e.to})"/>`);
+    if (e.label) {
+      const mx=(x1+x2)/2, my=(y1+y2)/2;
+      parts.push(`<text x="${mx+8}" y="${my}" font-size="10" fill="#5F5E5A">${e.label}</text>`);
+    }
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const pos = nodePositions[n.id];
+    if (!pos) return;
+    const c   = colors[n.type] || colors.process;
+    const {x,y} = pos;
+    const isDiamond = n.type==='decision';
+    if (isDiamond) {
+      const cx=x+W/2, cy=y+H/2;
+      parts.push(`<polygon points="${cx},${y} ${x+W},${cy} ${cx},${y+H} ${x},${cy}" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5"/>`);
+    } else if (n.type==='start'||n.type==='end') {
+      parts.push(`<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="${H/2}" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5"/>`);
+    } else {
+      parts.push(`<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="8" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5"/>`);
+    }
+    parts.push(`<text x="${x+W/2}" y="${y+H/2+5}" text-anchor="middle" font-size="12" font-weight="500" fill="${c.text}">${n.label}</text>`);
+  });
+
+  parts.push('</svg>');
+  return parts.join('\n');
+}
+
+// ── Mind map ──────────────────────────────────────────────────────────────────
+async function generateMindmap() {
+  showLoading('mindmap', true);
+  document.getElementById('mindmapEmpty').style.display = 'none';
+  try {
+    const res  = await fetch(`/project/${PROJECT_ID}/generate-mindmap`, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    const svg  = buildMindmapSVG(data);
+    svgStore['mindmap'] = svg;
+    document.getElementById('mindmapSVGWrap').innerHTML = svg;
+    showResult('mindmap');
+  } catch(e) { alert('Error: '+e.message); document.getElementById('mindmapEmpty').style.display='block'; }
+  finally { showLoading('mindmap', false); }
+}
+
+function buildMindmapSVG(data) {
+  const center   = data.center || 'Project';
+  const branches = data.branches || [];
+  const CX=300, CY=220, svgW=600, svgH=440;
+  const colorMap = {
+    blue:   {fill:'#1e3a5f',stroke:'#378ADD',text:'#7ec8f8'},
+    green:  {fill:'#0a2e1a',stroke:'#1D9E75',text:'#6ee7b7'},
+    amber:  {fill:'#2e2a0a',stroke:'#BA7517',text:'#fcd34d'},
+    purple: {fill:'#2a1a3b',stroke:'#7F77DD',text:'#c4b5fd'},
+    coral:  {fill:'#3b1a1a',stroke:'#E24B4A',text:'#fca5a5'},
+  };
+  const angles = branches.map((_,i) => (i/branches.length)*2*Math.PI - Math.PI/2);
+  const BR=130, SR=200;
+
+  let parts = [`<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;background:#0a0f1e;border-radius:12px;font-family:sans-serif">`];
+  parts.push(`<circle cx="${CX}" cy="${CY}" r="50" fill="#0a1628" stroke="#378ADD" stroke-width="2"/>`);
+  const words = center.split(' ');
+  words.forEach((w,i) => {
+    parts.push(`<text x="${CX}" y="${CY+(i-(words.length-1)/2)*14}" text-anchor="middle" font-size="11" font-weight="500" fill="#7ec8f8">${w}</text>`);
+  });
+
+  branches.forEach((b,i) => {
+    const angle = angles[i];
+    const bx    = CX + Math.cos(angle)*BR;
+    const by    = CY + Math.sin(angle)*BR;
+    const c     = colorMap[b.color] || colorMap.blue;
+    parts.push(`<line x1="${CX}" y1="${CY}" x2="${bx}" y2="${by}" stroke="${c.stroke}" stroke-width="2" opacity="0.5"/>`);
+    parts.push(`<rect x="${bx-50}" y="${by-16}" width="100" height="32" rx="16" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5"/>`);
+    parts.push(`<text x="${bx}" y="${by+5}" text-anchor="middle" font-size="11" font-weight="500" fill="${c.text}">${b.topic}</text>`);
+
+    const subs = b.subtopics || [];
+    const subAngles = subs.map((_,j) => angle + (j-(subs.length-1)/2)*0.4);
+    subs.forEach((s,j) => {
+      const sa  = subAngles[j];
+      const sx  = CX + Math.cos(sa)*SR;
+      const sy  = CY + Math.sin(sa)*SR;
+      parts.push(`<line x1="${bx}" y1="${by}" x2="${sx}" y2="${sy}" stroke="${c.stroke}" stroke-width="1" opacity="0.35"/>`);
+      parts.push(`<rect x="${sx-35}" y="${sy-11}" width="70" height="22" rx="5" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1" opacity="0.7"/>`);
+      parts.push(`<text x="${sx}" y="${sy+4}" text-anchor="middle" font-size="9" fill="${c.text}">${s.length>10?s.slice(0,10)+'…':s}</text>`);
+    });
+  });
+
+  parts.push('</svg>');
+  return parts.join('\n');
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+async function generateTimeline() {
+  showLoading('timeline', true);
+  document.getElementById('timelineEmpty').style.display = 'none';
+  try {
+    const res  = await fetch(`/project/${PROJECT_ID}/generate-timeline`, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    const events = data.events || [];
+    const container = document.getElementById('timelineContent');
+    container.innerHTML = events.map((e,i) => `
+      <div class="timeline-item">
+        <div class="timeline-dot-wrap">
+          <div class="timeline-dot ${e.type||'task'}"></div>
+          ${i<events.length-1?'<div class="timeline-line"></div>':''}
+        </div>
+        <div class="timeline-content">
+          <div class="timeline-date">${e.date||''}</div>
+          <div class="timeline-title">${e.title||''}</div>
+          <div class="timeline-desc">${e.description||''}</div>
+        </div>
+      </div>`).join('');
+    showResult('timeline');
+  } catch(e) { alert('Error: '+e.message); document.getElementById('timelineEmpty').style.display='block'; }
+  finally { showLoading('timeline', false); }
+}
+
+// ── Executive briefing ────────────────────────────────────────────────────────
+async function generateBriefing() {
+  showLoading('briefing', true);
+  document.getElementById('briefingEmpty').style.display = 'none';
+  try {
+    const res  = await fetch(`/project/${PROJECT_ID}/generate-briefing`, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    const c = document.getElementById('briefingContent');
+    c.innerHTML = `
+      <div class="briefing-section">
+        <div class="briefing-section-title">Situation</div>
+        <div style="font-size:12px;color:#555;line-height:1.6">${data.situation||''}</div>
+      </div>
+      <div class="briefing-section">
+        <div class="briefing-section-title">Key facts</div>
+        ${(data.key_facts||[]).map(f=>`<div class="briefing-item"><span class="briefing-bullet">•</span>${f}</div>`).join('')}
+      </div>
+      <div class="briefing-section">
+        <div class="briefing-section-title">Risks</div>
+        ${(data.risks||[]).map(r=>`<div class="briefing-item"><span class="briefing-bullet" style="color:#dc2626">!</span>${r}</div>`).join('')}
+      </div>
+      <div class="briefing-section">
+        <div class="briefing-section-title">Recommendations</div>
+        ${(data.recommendations||[]).map(r=>`<div class="briefing-item"><span class="briefing-bullet" style="color:#16a34a">✓</span>${r}</div>`).join('')}
+      </div>
+      <div class="briefing-section">
+        <div class="briefing-section-title">Action items</div>
+        ${(data.action_items||[]).map(a=>`
+          <div class="action-row">
+            <span style="font-size:12px;color:#333">${a.action||''}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:11px;color:#888">${a.owner||''}</span>
+              <span class="priority-${(a.priority||'medium').toLowerCase()}">${a.priority||'Medium'}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="briefing-section">
+        <div class="briefing-section-title">Conclusion</div>
+        <div style="font-size:12px;color:#555;line-height:1.6">${data.conclusion||''}</div>
+      </div>`;
+    showResult('briefing');
+  } catch(e) { alert('Error: '+e.message); document.getElementById('briefingEmpty').style.display='block'; }
+  finally { showLoading('briefing', false); }
+}
+
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+async function generateFAQ() {
+  showLoading('faq', true);
+  document.getElementById('faqEmpty').style.display = 'none';
+  try {
+    const res  = await fetch(`/project/${PROJECT_ID}/generate-faq`, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    const faqs = data.faqs || [];
+    document.getElementById('faqContent').innerHTML = faqs.map((f,i) => `
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFAQ(${i})">
+          <span>${f.q||''}</span><span style="color:#aaa;font-size:12px">▼</span>
+        </div>
+        <div class="faq-a" id="faq-${i}">${f.a||''}</div>
+      </div>`).join('');
+    showResult('faq');
+  } catch(e) { alert('Error: '+e.message); document.getElementById('faqEmpty').style.display='block'; }
+  finally { showLoading('faq', false); }
+}
+
+function toggleFAQ(i) {
+  const el = document.getElementById('faq-'+i);
+  el.classList.toggle('open');
+}
+
+// ── Word report ───────────────────────────────────────────────────────────────
+async function downloadReport() {
+  const btn = document.getElementById('reportBtn');
+  btn.disabled    = true;
+  btn.innerHTML   = '<span>⏳</span> Generating report...';
+  try {
+    const res = await fetch(`/project/${PROJECT_ID}/generate-report`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+    });
+    if (!res.ok) { const e=await res.json(); alert(e.error||'Report error'); return; }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = PROJ_NAME.replace(/\s+/g,'_') + '_report.docx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) { alert('Error: '+e.message); }
+  finally { btn.disabled=false; btn.innerHTML='<span>📄</span> Word report (.docx)'; }
+}
+
+// ── Download helpers ──────────────────────────────────────────────────────────
+function downloadSVG(key) {
+  const svg = svgStore[key];
+  if (!svg) { alert('Generate the diagram first'); return; }
+  const blob = new Blob([svg], {type:'image/svg+xml'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = PROJ_NAME.replace(/\s+/g,'_') + '_' + key + '.svg';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadPNG(wrapperId) {
+  const svgEl = document.querySelector('#'+wrapperId+' svg');
+  if (!svgEl) { alert('Generate the diagram first'); return; }
+  const vb     = svgEl.viewBox.baseVal;
+  const canvas = document.createElement('canvas');
+  canvas.width  = vb.width  || 800;
+  canvas.height = vb.height || 600;
+  const ctx  = canvas.getContext('2d');
+  const img  = new Image();
+  const blob = new Blob([svgEl.outerHTML], {type:'image/svg+xml;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  img.onload = function() {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    const a    = document.createElement('a');
+    a.href     = canvas.toDataURL('image/png');
+    a.download = PROJ_NAME.replace(/\s+/g,'_') + '_diagram.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+  img.src = url;
+}
+</script>
+</body>
+</html>

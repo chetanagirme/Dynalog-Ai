@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ project.name }} — AI Chat</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9f9f8;display:flex;flex-direction:column;height:100vh;color:#1a1a1a}
+    .topbar{background:#fff;border-bottom:1px solid #e8e8e5;padding:0 20px;height:56px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:10}
+    .topbar-left{display:flex;align-items:center;gap:10px}
+    .logo{width:32px;height:32px;background:#0a1628;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600}
+    .project-pill{font-size:12px;background:#f0f0ed;color:#444;padding:3px 10px;border-radius:20px;font-weight:500}
+    .topbar-right{display:flex;align-items:center;gap:8px}
+    .btn-link{font-size:13px;color:#555;text-decoration:none;padding:6px 12px;border-radius:8px;border:1px solid #e8e8e5;background:#fff;cursor:pointer;transition:background .15s}
+    .btn-link:hover{background:#f5f5f3}
+    .ppt-btn{font-size:13px;color:#fff;padding:6px 12px;border-radius:8px;border:none;background:#185FA5;cursor:pointer;font-weight:500;transition:all .15s;display:flex;align-items:center;gap:5px}
+    .ppt-btn:hover{background:#0c447c}
+    .ppt-btn:disabled{opacity:.6;cursor:not-allowed}
+    .main{display:flex;flex:1;overflow:hidden}
+    .sidebar{width:260px;background:#fff;border-right:1px solid #e8e8e5;display:flex;flex-direction:column;flex-shrink:0}
+    .sidebar-top{padding:12px}
+    .new-chat-btn{width:100%;padding:9px 14px;background:#0a1628;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s}
+    .new-chat-btn:hover{background:#1a2e4a}
+    .sidebar-body{flex:1;overflow-y:auto;padding:8px}
+    .sidebar-body::-webkit-scrollbar{width:3px}
+    .sidebar-body::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:2px}
+    .date-group{font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;padding:10px 8px 4px}
+    .conv-item{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s}
+    .conv-item:hover{background:#f5f5f3}
+    .conv-item.active{background:#f0f0ed}
+    .conv-title{flex:1;font-size:13px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .conv-item.active .conv-title{font-weight:500;color:#0a1628}
+    .conv-delete{font-size:14px;color:#ccc;cursor:pointer;padding:2px 4px;display:none;border-radius:4px}
+    .conv-item:hover .conv-delete{display:block}
+    .conv-delete:hover{color:#dc2626;background:#fef2f2}
+    .chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .messages{flex:1;overflow-y:auto;padding:28px 0;display:flex;flex-direction:column;gap:4px;scroll-behavior:smooth}
+    .messages::-webkit-scrollbar{width:4px}
+    .messages::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px}
+    .welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center}
+    .welcome-logo{width:56px;height:56px;background:#0a1628;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:20px}
+    .welcome h2{font-size:22px;font-weight:500;margin-bottom:8px}
+    .welcome p{font-size:14px;color:#666;max-width:420px;line-height:1.6}
+    .welcome-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:20px;max-width:500px}
+    .chip{background:#fff;border:1px solid #e8e8e5;border-radius:20px;padding:7px 14px;font-size:13px;color:#444;cursor:pointer;transition:all .15s}
+    .chip:hover{background:#f0f0ed;border-color:#ccc}
+    .msg-row{display:flex;padding:4px 0;width:100%}
+    .msg-row.user{justify-content:flex-end}
+    .msg-row.bot{justify-content:flex-start}
+    .msg-inner{display:flex;gap:12px;max-width:720px;width:100%;padding:0 24px}
+    .msg-row.user .msg-inner{flex-direction:row-reverse}
+    .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;margin-top:2px}
+    .msg-row.user .avatar{background:#0a1628;color:#fff;font-size:12px;font-weight:700}
+    .msg-row.bot .avatar{background:#f0f0ed;font-size:17px}
+    .msg-body{display:flex;flex-direction:column;gap:6px;max-width:calc(100% - 48px)}
+    .msg-row.user .msg-body{align-items:flex-end}
+    .msg-row.bot .msg-body{align-items:flex-start}
+    .sender-name{font-size:12px;font-weight:600;color:#888;padding:0 2px}
+    .bubble{padding:12px 16px;font-size:14px;line-height:1.8;max-width:100%;word-wrap:break-word;white-space:pre-wrap}
+    .msg-row.user .bubble{background:#0a1628;color:#fff;border-radius:18px 18px 4px 18px}
+    .msg-row.bot .bubble{background:transparent;color:#1a1a1a;padding:4px 0}
+    .sources-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+    .source-chip{background:#f0f0ed;border:1px solid #e0e0db;border-radius:6px;padding:3px 8px;font-size:11px;color:#555}
+    .cursor{display:inline-block;width:2px;height:14px;background:#333;margin-left:2px;animation:blink .7s infinite;vertical-align:middle}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    .typing-dots span{display:inline-block;width:6px;height:6px;background:#aaa;border-radius:50%;margin:0 2px;animation:bounce 1.2s infinite}
+    .typing-dots span:nth-child(2){animation-delay:.2s}
+    .typing-dots span:nth-child(3){animation-delay:.4s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+    .input-area{padding:12px 24px 18px;background:#f9f9f8;flex-shrink:0;display:flex;justify-content:center}
+    .input-box{width:100%;max-width:720px;background:#fff;border:1px solid #e0e0db;border-radius:16px;overflow:hidden;transition:border-color .15s;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+    .input-box:focus-within{border-color:#0a1628;box-shadow:0 2px 16px rgba(10,22,40,.1)}
+    .input-top{padding:8px 14px 0;display:flex;align-items:center;gap:8px}
+    .files-pill{font-size:11px;color:#888;background:#f5f5f3;padding:3px 8px;border-radius:10px}
+    .model-pill{font-size:11px;color:#16a34a;background:#f0fdf4;padding:3px 8px;border-radius:10px;border:1px solid #bbf7d0}
+    .input-main{display:flex;align-items:flex-end;padding:8px 14px 10px;gap:8px}
+    textarea{flex:1;border:none;outline:none;resize:none;font-size:15px;font-family:inherit;line-height:1.5;background:transparent;color:#1a1a1a;max-height:160px;padding:4px 0}
+    textarea::placeholder{color:#aaa}
+    .send-btn{width:36px;height:36px;border-radius:10px;background:#0a1628;border:none;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;transition:background .15s}
+    .send-btn:hover{background:#1a2e4a}
+    .send-btn:disabled{background:#ddd;cursor:not-allowed}
+    .input-hint{font-size:11px;color:#bbb;text-align:center;padding:5px 0 0}
+    .stream-indicator{font-size:11px;color:#888;padding:0 14px 6px;display:none;align-items:center;gap:5px}
+    .stream-dot{width:5px;height:5px;border-radius:50%;background:#0a1628;animation:pulse 1s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .ppt-toast{position:fixed;bottom:24px;right:24px;background:#0a1628;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;display:none;align-items:center;gap:8px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">DY</div>
+    <span style="font-size:14px;font-weight:500">{{ project.name }}</span>
+    <span class="project-pill">AI Chat</span>
+  </div>
+  <div class="topbar-right">
+    <span style="font-size:13px;color:#555;padding:6px 12px;background:#f5f5f3;border-radius:8px">{{ current_user.full_name }}</span>
+   <button class="ppt-btn" id="pptBtn" onclick="generatePPT()">📊 Generate PPT</button>
+    <button class="ppt-btn" id="diagramBtn" onclick="generateDiagram()" style="background:#0F6E56">⬛ Block Diagram</button>
+    <a href="/project/{{ project.id }}" class="btn-link">Project files</a>
+    <a href="/dashboard" class="btn-link">Dashboard</a>
+    <a href="/logout" class="btn-link">Sign out</a>
+  </div>
+</div>
+
+<div class="ppt-toast" id="pptToast"></div>
+<div class="ppt-toast" id="diagramToast"></div>
+
+<!-- Diagram modal -->
+<div id="diagramModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#0a0f1e;border-radius:16px;width:100%;max-width:900px;max-height:90vh;overflow:auto;padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span id="diagramTitle" style="font-size:15px;font-weight:500;color:#7ec8f8"></span>
+      <div style="display:flex;gap:8px">
+        <button onclick="downloadDiagram()" style="padding:7px 14px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">Download SVG</button>
+        <button onclick="document.getElementById('diagramModal').style.display='none'" style="padding:7px 14px;background:#333;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">Close</button>
+      </div>
+    </div>
+    <div id="diagramContent"></div>
+  </div>
+</div>
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <button class="new-chat-btn" onclick="newChat()">✏️ New chat</button>
+    </div>
+    <div class="sidebar-body" id="sidebarBody">
+      {% if conversations %}
+        {% set ns = namespace(last_group='') %}
+        {% for conv in conversations %}
+          {% if conv.updated_at != ns.last_group %}
+            {% set ns.last_group = conv.updated_at %}
+            <div class="date-group">
+              {% if conv.updated_at == today %}Today
+              {% elif conv.updated_at == yesterday %}Yesterday
+              {% else %}{{ conv.updated_at }}{% endif %}
+            </div>
+          {% endif %}
+          <div class="conv-item {% if active_conv_id == conv.id %}active{% endif %}"
+               id="conv-{{ conv.id }}" onclick="loadConversation({{ conv.id }})">
+            <span class="conv-title">{{ conv.title }}</span>
+            <span class="conv-delete" onclick="deleteConv(event,{{ conv.id }})">✕</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="padding:20px 12px;font-size:13px;color:#bbb;text-align:center">
+          No conversations yet.<br>Start chatting!
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="chat-area">
+    <div class="welcome" id="welcome" {% if active_conv_id %}style="display:none"{% endif %}>
+      <div class="welcome-logo">📁</div>
+      <h2>{{ project.name }}</h2>
+      <p>Ask anything about your project files. Answers are based only on your uploaded documents with source citations.</p>
+      <div class="welcome-chips">
+        <div class="chip" onclick="useChip(this)">Summarise this project</div>
+        <div class="chip" onclick="useChip(this)">What issues are documented?</div>
+        <div class="chip" onclick="useChip(this)">List all components mentioned</div>
+        <div class="chip" onclick="useChip(this)">What are the key specifications?</div>
+        <div class="chip" onclick="useChip(this)">What tests were performed?</div>
+        <div class="chip" onclick="useChip(this)">Show me the main findings</div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages" {% if not active_conv_id %}style="display:none"{% endif %}>
+      {% for item in history %}
+        <div class="msg-row user">
+          <div class="msg-inner">
+            <div class="avatar">{{ current_user.full_name[:2].upper() }}</div>
+            <div class="msg-body"><div class="bubble">{{ item.message }}</div></div>
+          </div>
+        </div>
+        <div class="msg-row bot">
+          <div class="msg-inner">
+            <div class="avatar">📁</div>
+            <div class="msg-body">
+              <div class="sender-name">Project AI</div>
+              <div class="bubble">{{ item.response }}</div>
+              {% if item.sources %}
+              <div class="sources-row">
+                <script>
+                  (function(){
+                    try {
+                      var s = {{ item.sources|safe }};
+                      if(typeof s==='string') s=JSON.parse(s);
+                      var row=document.currentScript.previousElementSibling;
+                      s.forEach(function(src){
+                        var chip=document.createElement('span');
+                        chip.className='source-chip';
+                        chip.textContent='📄 '+src.filename;
+                        row.appendChild(chip);
+                      });
+                    } catch(e){}
+                  })();
+                </script>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="input-area">
+      <div style="width:100%;max-width:720px">
+        <div class="input-box">
+          <div class="input-top">
+            <span class="files-pill">📂 {{ files|selectattr('indexed')|list|length }} of {{ files|length }} files indexed</span>
+            <span class="model-pill">⚡ phi3</span>
+          </div>
+          <div class="stream-indicator" id="streamIndicator">
+            <div class="stream-dot"></div>
+            <span>AI is writing...</span>
+          </div>
+          <div class="input-main">
+            <textarea id="userInput" rows="1"
+              placeholder="Ask a question about {{ project.name }}..."
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+              oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+          </div>
+        </div>
+        <div class="input-hint">Answers based only on uploaded project files · Enter to send</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let conversationId = {{ active_conv_id or 'null' }};
+const PROJECT_ID   = {{ project.id }};
+const userInitials = '{{ current_user.full_name[:2].upper() }}';
+let isStreaming    = false;
+
+function useChip(el) {
+  document.getElementById('userInput').value = el.textContent;
+  document.getElementById('userInput').focus();
+}
+
+function newChat() {
+  if (isStreaming) return;
+  conversationId = null;
+  document.getElementById('messages').innerHTML   = '';
+  document.getElementById('messages').style.display = 'none';
+  document.getElementById('welcome').style.display  = 'flex';
+  document.querySelectorAll('.conv-item').forEach(c => c.classList.remove('active'));
+}
+
+function loadConversation(id) {
+  if (isStreaming) return;
+  window.location.href = `/project/${PROJECT_ID}/chat/${id}`;
+}
+
+async function deleteConv(e, id) {
+  e.stopPropagation();
+  if (!confirm('Delete this conversation?')) return;
+  await fetch(`/api/delete-conversation/${id}`, { method: 'DELETE' });
+  const el = document.getElementById('conv-' + id);
+  if (el) el.remove();
+  if (conversationId === id) newChat();
+}
+
+async function sendMessage() {
+  if (isStreaming) return;
+  const input = document.getElementById('userInput');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  isStreaming = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('welcome').style.display   = 'none';
+  document.getElementById('messages').style.display  = 'flex';
+
+  addUserMessage(msg);
+  input.value = '';
+  input.style.height = 'auto';
+
+  const botRow   = createBotRow();
+  const bubbleEl = botRow.querySelector('.bubble');
+  const srcRow   = botRow.querySelector('.sources-row');
+  document.getElementById('messages').appendChild(botRow);
+  scrollToBottom();
+
+  document.getElementById('streamIndicator').style.display = 'flex';
+
+  try {
+    const res = await fetch(`/api/project/${PROJECT_ID}/chat`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ message: msg, conversation_id: conversationId })
+    });
+
+    const reader   = res.body.getReader();
+    const decoder  = new TextDecoder();
+    let   buffer   = '';
+    let   fullText = '';
+
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    bubbleEl.appendChild(cursor);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+
+          if (data.type === 'meta') {
+            if (data.is_new && data.conversation_id) {
+              conversationId = data.conversation_id;
+              window.history.pushState({}, '', `/project/${PROJECT_ID}/chat/${conversationId}`);
+              addToSidebar(conversationId, msg);
+            }
+            if (data.sources && data.sources.length) {
+              data.sources.forEach(s => {
+                const chip = document.createElement('span');
+                chip.className   = 'source-chip';
+                chip.textContent = '📄 ' + s.filename;
+                srcRow.appendChild(chip);
+              });
+            }
+          }
+
+          if (data.type === 'token') {
+            fullText += data.text;
+            if (cursor.parentNode) cursor.parentNode.removeChild(cursor);
+            bubbleEl.textContent = fullText;
+            bubbleEl.appendChild(cursor);
+            scrollToBottom();
+          }
+
+          if (data.type === 'done') {
+            if (cursor.parentNode) cursor.parentNode.removeChild(cursor);
+            bubbleEl.textContent = fullText;
+          }
+
+        } catch(e) {}
+      }
+    }
+    if (cursor.parentNode) cursor.parentNode.removeChild(cursor);
+
+  } catch(e) {
+    bubbleEl.textContent = 'Connection error. Make sure Ollama is running — open a terminal and type: ollama serve';
+  }
+
+  document.getElementById('streamIndicator').style.display = 'none';
+  document.getElementById('sendBtn').disabled = false;
+  isStreaming = false;
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+function createBotRow() {
+  const row = document.createElement('div');
+  row.className = 'msg-row bot';
+  row.innerHTML = `
+    <div class="msg-inner">
+      <div class="avatar">📁</div>
+      <div class="msg-body">
+        <div class="sender-name">Project AI</div>
+        <div class="bubble"></div>
+        <div class="sources-row"></div>
+      </div>
+    </div>`;
+  return row;
+}
+
+function addUserMessage(text) {
+  const messages = document.getElementById('messages');
+  const row      = document.createElement('div');
+  row.className  = 'msg-row user';
+  row.innerHTML  = `
+    <div class="msg-inner">
+      <div class="avatar">${userInitials}</div>
+      <div class="msg-body"><div class="bubble">${text}</div></div>
+    </div>`;
+  messages.appendChild(row);
+  scrollToBottom();
+}
+
+function addToSidebar(id, title) {
+  const body  = document.getElementById('sidebarBody');
+  const empty = body.querySelector('div[style]');
+  if (empty) empty.remove();
+  let todayGroup = body.querySelector('.date-group');
+  if (!todayGroup || todayGroup.textContent.trim() !== 'Today') {
+    const g = document.createElement('div');
+    g.className   = 'date-group';
+    g.textContent = 'Today';
+    body.insertBefore(g, body.firstChild);
+    todayGroup = g;
+  }
+  const short = title.length > 45 ? title.substring(0, 45) + '...' : title;
+  const div   = document.createElement('div');
+  div.className = 'conv-item active';
+  div.id        = 'conv-' + id;
+  div.innerHTML = `<span class="conv-title">${short}</span><span class="conv-delete" onclick="deleteConv(event,${id})">✕</span>`;
+  div.onclick   = () => loadConversation(id);
+  document.querySelectorAll('.conv-item').forEach(c => c.classList.remove('active'));
+  todayGroup.insertAdjacentElement('afterend', div);
+}
+
+async function generatePPT() {
+  const btn  = document.getElementById('pptBtn');
+  const toast = document.getElementById('pptToast');
+
+  btn.disabled     = true;
+  btn.textContent  = 'Generating...';
+  toast.style.display = 'flex';
+  toast.textContent   = '📊 Building your presentation — please wait 30-60 seconds...';
+
+  try {
+    const res = await fetch(`/project/${PROJECT_ID}/generate-ppt`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ topic: 'project overview' })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      toast.textContent = '❌ Error: ' + (err.error || 'Could not generate PPT');
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
+      return;
+    }
+
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = '{{ project.name }}_presentation.pptx'.replace(/\s+/g, '_');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.textContent = '✓ Presentation downloaded!';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+
+  } catch(e) {
+    toast.textContent = '❌ Error: ' + e.message;
+    setTimeout(() => { toast.style.display = 'none'; }, 4000);
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '📊 Generate PPT';
+  }
+}
+
+let currentSVG = '';
+
+async function generateDiagram() {
+  const btn   = document.getElementById('diagramBtn');
+  const toast = document.getElementById('diagramToast');
+
+  btn.disabled    = true;
+  btn.textContent = 'Generating...';
+  toast.style.display = 'flex';
+  toast.textContent   = '⬛ Analysing project and building diagram...';
+
+  try {
+    const res = await fetch(`/project/${PROJECT_ID}/generate-diagram`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({})
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      toast.textContent = '❌ Error: ' + (err.error || 'Could not generate diagram');
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
+      return;
+    }
+
+    const data = await res.json();
+    currentSVG = data.svg;
+
+    document.getElementById('diagramTitle').textContent   = data.title;
+    document.getElementById('diagramContent').innerHTML   = data.svg;
+    document.getElementById('diagramModal').style.display = 'flex';
+
+    toast.textContent = '✓ Diagram ready!';
+    setTimeout(() => { toast.style.display = 'none'; }, 2000);
+
+  } catch(e) {
+    toast.textContent = '❌ Error: ' + e.message;
+    setTimeout(() => { toast.style.display = 'none'; }, 4000);
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '⬛ Block Diagram';
+  }
+}
+
+function downloadDiagram() {
+  if (!currentSVG) return;
+  const blob = new Blob([currentSVG], { type: 'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = '{{ project.name }}_diagram.svg'.replace(/\s+/g, '_');
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
